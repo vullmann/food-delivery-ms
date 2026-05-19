@@ -10,7 +10,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:notification}
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
