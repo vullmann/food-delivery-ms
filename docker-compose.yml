@@ -1,0 +1,290 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qg
+
+  discovery-server:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    restart: on-failure
+
+  customer-service:
+    build:
+      context: ./customer-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+      - "5001:5001" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-customer:5432/customerdb
+      SPRING_DATASOURCE_USERNAME: customer
+      SPRING_DATASOURCE_PASSWORD: customer
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5001
+    depends_on:
+      - postgres-customer
+      - kafka
+      - discovery-server
+    restart: on-failure
+
+  postgres-customer:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: customerdb
+      POSTGRES_USER: customer
+      POSTGRES_PASSWORD: customer
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-customer-data:/var/lib/postgresql/data
+
+  restaurant-service:
+    build:
+      context: ./restaurant-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+      - "5002:5002" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-restaurant:5432/restaurantdb
+      SPRING_DATASOURCE_USERNAME: restaurant
+      SPRING_DATASOURCE_PASSWORD: restaurant
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002
+    depends_on:
+      - postgres-restaurant
+      - kafka
+      - discovery-server
+    restart: on-failure
+
+  postgres-restaurant:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: restaurantdb
+      POSTGRES_USER: restaurant
+      POSTGRES_PASSWORD: restaurant
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-restaurant-data:/var/lib/postgresql/data
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "5000:5000" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/orderdb
+      SPRING_DATASOURCE_USERNAME: order
+      SPRING_DATASOURCE_PASSWORD: order
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
+    depends_on:
+      - postgres-order
+      - kafka
+      - discovery-server
+    restart: on-failure
+
+  postgres-order:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-order-data:/var/lib/postgresql/data
+
+  delivery-service:
+    build:
+      context: ./delivery-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+      - "5003:5003" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-delivery:5432/deliverydb
+      SPRING_DATASOURCE_USERNAME: delivery
+      SPRING_DATASOURCE_PASSWORD: delivery
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5003
+    depends_on:
+      - postgres-delivery
+      - kafka
+      - discovery-server
+    restart: on-failure
+
+  postgres-delivery:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: deliverydb
+      POSTGRES_USER: delivery
+      POSTGRES_PASSWORD: delivery
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-delivery-data:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+      - "5004:5004" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authdb
+      SPRING_DATASOURCE_USERNAME: auth
+      SPRING_DATASOURCE_PASSWORD: auth
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      CLIENTS_CUSTOMER-SERVICE-URL: http://customer-service:8081
+      JWT_SECRET: ${JWT_SECRET}
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5004
+    depends_on:
+      - postgres-auth
+      - customer-service
+      - discovery-server
+    restart: on-failure
+
+  postgres-auth:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+
+  mcp-service:
+    build:
+      context: ./mcp-service
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+      - "5090:5090" # DEBUG Port for IDE
+    environment:
+      MCP_CLIENTS_ORDER-SERVICE-URL: http://order-service:8080
+      MCP_CLIENTS_CUSTOMER-SERVICE-URL: http://customer-service:8081
+      MCP_CLIENTS_DELIVERY-SERVICE-URL: http://delivery-service:8083
+      MCP_CLIENTS_RESTAURANT-SERVICE-URL: http://restaurant-service:8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5090
+    depends_on:
+      - order-service
+      - customer-service
+      - delivery-service
+      - restaurant-service
+      - discovery-server
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sf http://localhost:8090/actuator/health | grep -q UP || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 3m
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
+      - "5008:5008" # DEBUG Port for IDE
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET}
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+    depends_on:
+      - discovery-server
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+      - "5007:5007" # DEBUG Port for IDE
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-notification:5432/notificationdb
+      SPRING_DATASOURCE_USERNAME: notification
+      SPRING_DATASOURCE_PASSWORD: notification
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_WHATSAPP_FROM: "whatsapp:+14155238886"
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
+    depends_on:
+      - postgres-notification
+      - kafka
+      - discovery-server
+    restart: on-failure
+
+  postgres-notification:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: notificationdb
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres-notification-data:/var/lib/postgresql/data
+
+  chat-service:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+      - "5085:5085" # DEBUG Port for IDE
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_AI_MCP_CLIENT_SSE_CONNECTIONS_FOOD-DELIVERY-MCP_URL: http://mcp-service:8090
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5085
+    depends_on:
+      mcp-service:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    restart: on-failure
+
+volumes:
+  postgres-order-data:
+  postgres-customer-data:
+  postgres-restaurant-data:
+  postgres-delivery-data:
+  postgres-auth-data:
+  postgres-notification-data:

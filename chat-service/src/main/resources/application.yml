@@ -1,0 +1,44 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: chat-service
+  ai:
+    google:
+      genai:
+        chat:
+          options:
+            model: gemini-2.5-flash-lite
+            thinking:
+              thinking-budget: 0
+    mcp:
+      client:
+        enabled: true
+        name: food-delivery-chat-client
+        version: 1.0.0
+        request-timeout: 30s
+        type: SYNC
+        toolcallback:
+          enabled: true
+        sse:
+          connections:
+            food-delivery-mcp:
+              url: http://mcp-service:8090  # Docker default; override in application-local.yml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/

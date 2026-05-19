@@ -1,0 +1,38 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: mcp-service
+  ai:
+    mcp:
+      server:
+        name: food-delivery-mcp
+        version: 1.0.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  health:
+    eureka:
+      enabled: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+
+# Downstream service base URLs (Docker defaults; override locally)
+mcp:
+  clients:
+    order-service-url: http://order-service:8080
+    customer-service-url: http://customer-service:8081
+    delivery-service-url: http://delivery-service:8083
+    restaurant-service-url: http://restaurant-service:8082
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 10

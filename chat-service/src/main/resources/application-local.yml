@@ -1,0 +1,18 @@
+# -------------------------------------------------------
+# Local profile: Gemini via Google AI Studio
+# -------------------------------------------------------
+spring:
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            food-delivery-mcp:
+              url: http://localhost:8090
+    google:
+      genai:
+        api-key: ${GOOGLE_AI_API_KEY}
+
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: DEBUG

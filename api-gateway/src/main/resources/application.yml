@@ -1,0 +1,66 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth/**
+
+            - id: customer-service
+              uri: lb://customer-service
+              predicates:
+                - Path=/customers/**
+
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/orders/**
+
+            - id: restaurant-service
+              uri: lb://restaurant-service
+              predicates:
+                - Path=/restaurants/**
+
+            - id: delivery-service-deliveries
+              uri: lb://delivery-service
+              predicates:
+                - Path=/deliveries/**
+
+            - id: delivery-service-drivers
+              uri: lb://delivery-service
+              predicates:
+                - Path=/drivers/**
+
+            - id: chat-service
+              uri: lb://chat-service
+              predicates:
+                - Path=/chat/**
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true

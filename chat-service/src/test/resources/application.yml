@@ -1,0 +1,14 @@
+jwt:
+  secret: dGVzdC1zZWNyZXQtZm9yLXVuaXQtdGVzdGluZy1tdXN0LWJlLTMyLWJ5dGVz
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+spring:
+  ai:
+    mcp:
+      client:
+        enabled: false
