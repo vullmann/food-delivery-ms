@@ -33,14 +33,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
-      - "5001:5001" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-customer:5432/customerdb
       SPRING_DATASOURCE_USERNAME: customer
       SPRING_DATASOURCE_PASSWORD: customer
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5001
     depends_on:
       - postgres-customer
       - kafka
@@ -64,14 +62,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8082:8082"
-      - "5002:5002" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-restaurant:5432/restaurantdb
       SPRING_DATASOURCE_USERNAME: restaurant
       SPRING_DATASOURCE_PASSWORD: restaurant
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002
     depends_on:
       - postgres-restaurant
       - kafka
@@ -95,14 +91,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-      - "5000:5000" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/orderdb
       SPRING_DATASOURCE_USERNAME: order
       SPRING_DATASOURCE_PASSWORD: order
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
     depends_on:
       - postgres-order
       - kafka
@@ -126,14 +120,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8083:8083"
-      - "5003:5003" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-delivery:5432/deliverydb
       SPRING_DATASOURCE_USERNAME: delivery
       SPRING_DATASOURCE_PASSWORD: delivery
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5003
     depends_on:
       - postgres-delivery
       - kafka
@@ -157,7 +149,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8084:8084"
-      - "5004:5004" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authdb
       SPRING_DATASOURCE_USERNAME: auth
@@ -165,7 +156,6 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       CLIENTS_CUSTOMER-SERVICE-URL: http://customer-service:8081
       JWT_SECRET: ${JWT_SECRET}
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5004
     depends_on:
       - postgres-auth
       - customer-service
@@ -189,14 +179,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8090:8090"
-      - "5090:5090" # DEBUG Port for IDE
     environment:
       MCP_CLIENTS_ORDER-SERVICE-URL: http://order-service:8080
       MCP_CLIENTS_CUSTOMER-SERVICE-URL: http://customer-service:8081
       MCP_CLIENTS_DELIVERY-SERVICE-URL: http://delivery-service:8083
       MCP_CLIENTS_RESTAURANT-SERVICE-URL: http://restaurant-service:8082
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5090
     depends_on:
       - order-service
       - customer-service
@@ -217,11 +205,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8088:8088"
-      - "5008:5008" # DEBUG Port for IDE
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       JWT_SECRET: ${JWT_SECRET}
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
     depends_on:
       - discovery-server
     restart: on-failure
@@ -232,7 +218,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8087:8087"
-      - "5007:5007" # DEBUG Port for IDE
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-notification:5432/notificationdb
       SPRING_DATASOURCE_USERNAME: notification
@@ -242,7 +227,6 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_WHATSAPP_FROM: "whatsapp:+14155238886"
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
     depends_on:
       - postgres-notification
       - kafka
@@ -266,14 +250,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
-      - "5085:5085" # DEBUG Port for IDE
     environment:
       SPRING_PROFILES_ACTIVE: local
       SPRING_AI_MCP_CLIENT_SSE_CONNECTIONS_FOOD-DELIVERY-MCP_URL: http://mcp-service:8090
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5085
     depends_on:
       mcp-service:
         condition: service_healthy
