@@ -47,6 +47,11 @@ class RestaurantOrderStatusTest {
     }
 
     @Test
+    void preparing_cannotTransitionToReceived() {
+        assertThat(RestaurantOrderStatus.PREPARING.canTransitionTo(RestaurantOrderStatus.RECEIVED)).isFalse();
+    }
+
+    @Test
     void readyForDelivery_canTransitionToPickedUp() {
         assertThat(RestaurantOrderStatus.READY_FOR_DELIVERY.canTransitionTo(RestaurantOrderStatus.PICKED_UP)).isTrue();
     }
@@ -54,6 +59,11 @@ class RestaurantOrderStatusTest {
     @Test
     void readyForDelivery_canTransitionToCancelled() {
         assertThat(RestaurantOrderStatus.READY_FOR_DELIVERY.canTransitionTo(RestaurantOrderStatus.CANCELLED)).isTrue();
+    }
+
+    @Test
+    void readyForDelivery_cannotTransitionToReceived() {
+        assertThat(RestaurantOrderStatus.READY_FOR_DELIVERY.canTransitionTo(RestaurantOrderStatus.RECEIVED)).isFalse();
     }
 
     @Test

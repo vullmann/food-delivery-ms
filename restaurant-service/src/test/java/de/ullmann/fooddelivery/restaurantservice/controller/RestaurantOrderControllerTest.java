@@ -1,5 +1,7 @@
 package de.ullmann.fooddelivery.restaurantservice.controller;
 
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -19,7 +21,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrder;
+import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrderStatus;
 import de.ullmann.fooddelivery.restaurantservice.exception.GlobalExceptionHandler;
+import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantOrderAccessDeniedException;
+import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantOrderNotFoundException;
 import de.ullmann.fooddelivery.restaurantservice.service.RestaurantOrderService;
 
 @WebMvcTest(controllers = {RestaurantOrderController.class, GlobalExceptionHandler.class})
@@ -69,40 +74,38 @@ class RestaurantOrderControllerTest {
 
     // ── PATCH /restaurants/{restaurantId}/orders/{orderId}/status ─────────────
 
-    // TODO: @Test
+    @Test
     void updateStatus_shouldReturn204() throws Exception {
-        // doNothing().when(restaurantOrderService).updateStatus(restaurantId, orderId, RestaurantOrderStatus.CONFIRMED);
+        doNothing().when(restaurantOrderService).updateStatus(restaurantId, customerOrderId, RestaurantOrderStatus.CONFIRMED);
 
         mockMvc.perform(patch("/restaurants/{restaurantId}/orders/{orderId}/status", restaurantId, customerOrderId)
                         .param("status", "CONFIRMED"))
                 .andExpect(status().isNoContent());
-
-        // verify(restaurantOrderService).updateStatus(restaurantId, orderId, RestaurantOrderStatus.CONFIRMED);
     }
 
-    // TODO: @Test
+    @Test
     void updateStatus_shouldReturn204_whenStatusIsInPreparation() throws Exception {
-        // doNothing().when(restaurantOrderService).updateStatus(restaurantId, orderId, RestaurantOrderStatus.PREPARING);
+        doNothing().when(restaurantOrderService).updateStatus(restaurantId, customerOrderId, RestaurantOrderStatus.PREPARING);
 
         mockMvc.perform(patch("/restaurants/{restaurantId}/orders/{orderId}/status", restaurantId, customerOrderId)
                         .param("status", "PREPARING"))
                 .andExpect(status().isNoContent());
     }
 
-    // TODO: @Test
+    @Test
     void updateStatus_shouldReturn404_whenOrderNotFound() throws Exception {
-        // doThrow(new RestaurantOrderNotFoundException(orderId))
-        //        .when(restaurantOrderService).updateStatus(restaurantId, orderId, RestaurantOrderStatus.CONFIRMED);
+        doThrow(new RestaurantOrderNotFoundException(customerOrderId))
+                .when(restaurantOrderService).updateStatus(restaurantId, customerOrderId, RestaurantOrderStatus.CONFIRMED);
 
         mockMvc.perform(patch("/restaurants/{restaurantId}/orders/{orderId}/status", restaurantId, customerOrderId)
                         .param("status", "CONFIRMED"))
                 .andExpect(status().isNotFound());
     }
 
-    // TODO: @Test
+    @Test
     void updateStatus_shouldReturn403_whenOrderBelongsToDifferentRestaurant() throws Exception {
-        // doThrow(new RestaurantOrderAccessDeniedException(orderId, restaurantId))
-        //        .when(restaurantOrderService).updateStatus(restaurantId, orderId, RestaurantOrderStatus.CONFIRMED);
+        doThrow(new RestaurantOrderAccessDeniedException(customerOrderId, restaurantId))
+                .when(restaurantOrderService).updateStatus(restaurantId, customerOrderId, RestaurantOrderStatus.CONFIRMED);
 
         mockMvc.perform(patch("/restaurants/{restaurantId}/orders/{orderId}/status", restaurantId, customerOrderId)
                         .param("status", "CONFIRMED"))

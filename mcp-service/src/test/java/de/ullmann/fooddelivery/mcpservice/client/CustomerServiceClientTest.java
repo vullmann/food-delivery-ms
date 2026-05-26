@@ -1,6 +1,10 @@
 package de.ullmann.fooddelivery.mcpservice.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -11,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -114,5 +119,41 @@ class CustomerServiceClientTest {
 
         assertThat(result).isEmpty();
         server.verify();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getCustomerById_networkError_shouldReturnEmpty() {
+        RestClient.RequestHeadersUriSpec<?> uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec<?> headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        RestClient mockRestClient = mock(RestClient.class);
+
+        when(mockRestClient.get()).thenReturn((RestClient.RequestHeadersUriSpec) uriSpec);
+        when(uriSpec.uri(anyString(), (Object) any())).thenReturn((RestClient.RequestHeadersSpec) headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(CustomerResponse.class)).thenThrow(new ResourceAccessException("timeout"));
+
+        Optional<CustomerResponse> result = new CustomerServiceClient(mockRestClient).getCustomerById("cust-id");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getCustomerByEmail_networkError_shouldReturnEmpty() {
+        RestClient.RequestHeadersUriSpec<?> uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec<?> headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        RestClient mockRestClient = mock(RestClient.class);
+
+        when(mockRestClient.get()).thenReturn((RestClient.RequestHeadersUriSpec) uriSpec);
+        when(uriSpec.uri(anyString(), (Object) any())).thenReturn((RestClient.RequestHeadersSpec) headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(CustomerResponse.class)).thenThrow(new ResourceAccessException("timeout"));
+
+        Optional<CustomerResponse> result = new CustomerServiceClient(mockRestClient).getCustomerByEmail("test@email.com");
+
+        assertThat(result).isEmpty();
     }
 }

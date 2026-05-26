@@ -1,10 +1,18 @@
 package de.ullmann.fooddelivery.restaurantservice.kafka;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.support.serializer.DeserializationException;
 
+import de.ullmann.fooddelivery.common.event.OrderPlacedEvent;
 import de.ullmann.fooddelivery.restaurantservice.service.RestaurantOrderService;
 
 @ExtendWith(MockitoExtension.class)
@@ -16,40 +24,21 @@ class OrderEventConsumerTest {
     @InjectMocks
     private OrderEventConsumer orderEventConsumer;
 
-    /*
-
     @Test
-    void shouldCallReceiveOrderWhenOrderPlacedEventReceived() {
-        // Arrange
-
-        OrderItemDto item = new OrderItemDto(UUID.randomUUID(), "Pasta", 2, new BigDecimal("12.50"));
-
-        OrderPlacedEvent event = new OrderPlacedEvent(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                new BigDecimal("45.50"),
-                List.of(item),
-                Address.of("Musterstraße 1", "23", "Halle", "06108", "DE"),
-                LocalDateTime.now()
-        );
-
-        // Act
-        orderEventConsumer.onOrderPlaced(event);
-
-        // Assert
-        verify(restaurantOrderService).receiveOrder(event);
-    }
-
-    @Test
-    void shouldStillCallServiceWhenEventHasNullOrderId() {
+    void onOrderPlaced_whenExIsNull_shouldCallReceiveOrder() {
         OrderPlacedEvent event = mock(OrderPlacedEvent.class);
-        when(event.orderId()).thenReturn(null);
 
-        orderEventConsumer.onOrderPlaced(event);
+        orderEventConsumer.onOrderPlaced(event, null);
 
         verify(restaurantOrderService).receiveOrder(event);
     }
 
-     */
+    @Test
+    void onOrderPlaced_whenExIsNotNull_shouldNotCallReceiveOrder() {
+        DeserializationException ex = new DeserializationException("deserialization failed", new byte[0], false, new RuntimeException());
+
+        orderEventConsumer.onOrderPlaced(null, ex);
+
+        verify(restaurantOrderService, never()).receiveOrder(any());
+    }
 }

@@ -2,8 +2,10 @@ package de.ullmann.fooddelivery.mcpservice.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -67,6 +69,17 @@ class DeliveryServiceClientTest {
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         Optional<DeliveryResponse> result = client.getDeliveryByOrderId(orderId);
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void getDeliveryByOrderId_networkError_shouldReturnEmpty() {
+        server.expect(requestTo("/deliveries?orderId=ord-id"))
+                .andRespond(withException(new IOException("Connection refused")));
+
+        Optional<DeliveryResponse> result = client.getDeliveryByOrderId("ord-id");
 
         assertThat(result).isEmpty();
         server.verify();

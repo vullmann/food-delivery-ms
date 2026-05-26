@@ -2,9 +2,11 @@ package de.ullmann.fooddelivery.mcpservice.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +65,17 @@ class RestaurantServiceClientTest {
     void getRestaurantById_serverError_shouldReturnEmpty() {
         server.expect(requestTo("/restaurants/rest-id"))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        Optional<RestaurantResponse> result = client.getRestaurantById("rest-id");
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void getRestaurantById_networkError_shouldReturnEmpty() {
+        server.expect(requestTo("/restaurants/rest-id"))
+                .andRespond(withException(new IOException("Connection refused")));
 
         Optional<RestaurantResponse> result = client.getRestaurantById("rest-id");
 

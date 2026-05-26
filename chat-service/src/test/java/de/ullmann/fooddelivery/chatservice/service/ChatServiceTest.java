@@ -172,6 +172,26 @@ class ChatServiceTest {
 
 
     @Test
+    void chat_shouldReturnFallbackWhenAllGenerationsHaveBlankText() {
+        AssistantMessage output = mock(AssistantMessage.class);
+        when(output.getText()).thenReturn("   ");
+
+        Generation gen = mock(Generation.class);
+        ChatGenerationMetadata metadata = mock(ChatGenerationMetadata.class);
+        when(gen.getMetadata()).thenReturn(metadata);
+        when(gen.getOutput()).thenReturn(output);
+
+        ChatResponse aiResp = mock(ChatResponse.class);
+        when(aiResp.getResults()).thenReturn(List.of(gen));
+        stubChain(aiResp);
+
+        de.ullmann.fooddelivery.chatservice.dto.ChatResponse result =
+                chatService.chat("s", "msg", "cust");
+
+        assertThat(result.reply()).isEqualTo(FALLBACK_MESSAGE);
+    }
+
+    @Test
     void chat_shouldReturnFallbackWhenAllGenerationsHaveNullText() {
         // 1. Explicitly mock the outer layer and its internal data container
         Generation gen = mock(Generation.class);

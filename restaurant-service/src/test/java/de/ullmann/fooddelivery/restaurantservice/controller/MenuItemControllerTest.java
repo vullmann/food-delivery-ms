@@ -145,6 +145,15 @@ class MenuItemControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void getMenuItem_shouldReturn404_whenRestaurantNotFound() throws Exception {
+        when(restaurantService.findMenuItem(restaurantId, itemId))
+                .thenThrow(new RestaurantNotFoundException(restaurantId));
+
+        mockMvc.perform(get("/restaurants/{restaurantId}/menu-items/{itemId}", restaurantId, itemId))
+                .andExpect(status().isNotFound());
+    }
+
     // ── PUT /restaurants/{restaurantId}/menu-items/{itemId} ──────────────────
 
     @Test
@@ -174,6 +183,29 @@ class MenuItemControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void updateMenuItem_shouldReturn400_whenNameBlank() throws Exception {
+        mockMvc.perform(put("/restaurants/{restaurantId}/menu-items/{itemId}", restaurantId, itemId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new UpdateMenuItemRequest("", "Classic",
+                                        new BigDecimal("9.90"), MenuItemCategory.MAIN, true))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateMenuItem_shouldReturn404_whenRestaurantNotFound() throws Exception {
+        when(restaurantService.updateMenuItem(eq(restaurantId), eq(itemId), any()))
+                .thenThrow(new RestaurantNotFoundException(restaurantId));
+
+        mockMvc.perform(put("/restaurants/{restaurantId}/menu-items/{itemId}", restaurantId, itemId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new UpdateMenuItemRequest("Margherita", "Classic",
+                                        new BigDecimal("9.90"), MenuItemCategory.MAIN, true))))
+                .andExpect(status().isNotFound());
+    }
+
     // ── DELETE /restaurants/{restaurantId}/menu-items/{itemId} ───────────────
 
     @Test
@@ -187,6 +219,15 @@ class MenuItemControllerTest {
     @Test
     void deleteMenuItem_shouldReturn404_whenItemNotFound() throws Exception {
         doThrow(new MenuItemNotFoundException(itemId))
+                .when(restaurantService).deleteMenuItem(restaurantId, itemId);
+
+        mockMvc.perform(delete("/restaurants/{restaurantId}/menu-items/{itemId}", restaurantId, itemId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteMenuItem_shouldReturn404_whenRestaurantNotFound() throws Exception {
+        doThrow(new RestaurantNotFoundException(restaurantId))
                 .when(restaurantService).deleteMenuItem(restaurantId, itemId);
 
         mockMvc.perform(delete("/restaurants/{restaurantId}/menu-items/{itemId}", restaurantId, itemId))

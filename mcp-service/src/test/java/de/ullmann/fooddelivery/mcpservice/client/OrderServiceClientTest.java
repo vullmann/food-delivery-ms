@@ -2,9 +2,11 @@ package de.ullmann.fooddelivery.mcpservice.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -100,6 +102,39 @@ class OrderServiceClientTest {
     void getOrdersByCustomer_onException_shouldReturnEmptyList() {
         server.expect(requestTo("/orders/customer/cust-id"))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST));
+
+        List<OrderResponse> result = client.getOrdersByCustomer("cust-id");
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void getOrderById_networkError_shouldReturnEmpty() {
+        server.expect(requestTo("/orders/ord-id"))
+                .andRespond(withException(new IOException("Connection refused")));
+
+        Optional<OrderResponse> result = client.getOrderById("ord-id");
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void getOrdersByCustomer_networkError_shouldReturnEmptyList() {
+        server.expect(requestTo("/orders/customer/cust-id"))
+                .andRespond(withException(new IOException("Connection refused")));
+
+        List<OrderResponse> result = client.getOrdersByCustomer("cust-id");
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void getOrdersByCustomer_nullBody_shouldReturnEmptyList() {
+        server.expect(requestTo("/orders/customer/cust-id"))
+                .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
 
         List<OrderResponse> result = client.getOrdersByCustomer("cust-id");
 

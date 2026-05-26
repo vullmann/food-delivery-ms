@@ -7,6 +7,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 import java.util.UUID;
@@ -120,5 +121,42 @@ class GlobalExceptionHandlerTest {
         // Then
         assertThat(problemDetail).isNotNull();
         assertThat(problemDetail.getDetail()).isEqualTo(customMessage);
+    }
+
+    @Test
+    void handleMenuItemNotFound_ShouldReturnNotFoundProblemDetail() {
+        UUID menuItemId = UUID.randomUUID();
+        MenuItemNotFoundException exception = new MenuItemNotFoundException(menuItemId);
+
+        ProblemDetail problemDetail = exceptionHandler.handleMenuItemNotFound(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Menu Item Not Found");
+        assertThat(problemDetail.getDetail()).isEqualTo("MenuItem not found with id: " + menuItemId);
+    }
+
+    @Test
+    void handleRestaurantOrderNotFound_ShouldReturnNotFoundProblemDetail() {
+        UUID orderId = UUID.randomUUID();
+        RestaurantOrderNotFoundException exception = new RestaurantOrderNotFoundException(orderId);
+
+        ProblemDetail problemDetail = exceptionHandler.handleRestaurantOrderNotFound(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Restaurant Order Not Found");
+        assertThat(problemDetail.getDetail()).isEqualTo("Restaurant order not found for orderId: " + orderId);
+    }
+
+    @Test
+    void handleTypeMismatch_ShouldReturnBadRequestProblemDetail() {
+        MethodArgumentTypeMismatchException exception = mock(MethodArgumentTypeMismatchException.class);
+        when(exception.getValue()).thenReturn("INVALID_VALUE");
+        when(exception.getName()).thenReturn("status");
+
+        ProblemDetail problemDetail = exceptionHandler.handleTypeMismatch(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Invalid Parameter");
+        assertThat(problemDetail.getDetail()).isEqualTo("Invalid value 'INVALID_VALUE' for parameter 'status'");
     }
 }

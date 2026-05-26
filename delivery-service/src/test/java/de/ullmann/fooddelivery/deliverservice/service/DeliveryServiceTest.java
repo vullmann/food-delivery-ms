@@ -147,6 +147,18 @@ class DeliveryServiceTest {
     }
 
     @Test
+    void updateStatus_toCancelled_withNoDriver_shouldPublishDeliveryCancelledEventWithoutFreeingDriver() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+
+        deliveryService.updateStatus(delivery.getId(), DeliveryStatus.CANCELLED);
+
+        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.CANCELLED);
+        verify(outboxEventService).createEvent(any(), eq(orderId), eq(DeliveryCancelledEvent.TOPIC), any(DeliveryCancelledEvent.class));
+        verify(driverRepository, never()).findById(any());
+    }
+
+    @Test
     void updateStatus_shouldThrow_whenDeliveryNotFound() {
         UUID unknownId = UUID.randomUUID();
         when(deliveryOrderRepository.findById(unknownId)).thenReturn(Optional.empty());
