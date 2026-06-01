@@ -5,7 +5,7 @@ spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://localhost:5437/authdb  # local; Docker: postgres-auth:5432
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5437}/${DB_NAME:authdb}
     username: ${SPRING_DATASOURCE_USERNAME:auth}
     password: ${SPRING_DATASOURCE_PASSWORD:auth}
   jpa:
@@ -23,7 +23,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/
 
 management:
   endpoints:
@@ -39,4 +39,4 @@ jwt:
   expiration-ms: 86400000  # 24 hours
 
 clients:
-  customer-service-url: http://localhost:8081
+  customer-service-url: ${CUSTOMER_SERVICE_URL:http://localhost:8081}

@@ -5,7 +5,7 @@ spring:
   application:
     name: customer-service
   datasource:
-    url: jdbc:postgresql://localhost:5434/customerdb  # local; Docker: postgres-customer:5432
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:customerdb}
     username: ${SPRING_DATASOURCE_USERNAME:customer}
     password: ${SPRING_DATASOURCE_PASSWORD:customer}
   jpa:
@@ -21,10 +21,14 @@ spring:
     init:
       mode: always
   kafka:
-    bootstrap-servers: kafka:29092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  cloud:
+    aws:
+      sns:
+        enabled: false
 
 management:
   endpoints:
@@ -38,4 +42,4 @@ management:
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

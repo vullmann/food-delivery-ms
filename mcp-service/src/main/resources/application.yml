@@ -25,14 +25,14 @@ management:
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/
 
 # Downstream service base URLs (Docker defaults; override locally)
 mcp:
   clients:
-    order-service-url: http://order-service:8080
-    customer-service-url: http://customer-service:8081
-    delivery-service-url: http://delivery-service:8083
-    restaurant-service-url: http://restaurant-service:8082
-    connect-timeout-seconds: 5
-    read-timeout-seconds: 10
+    order-service-url: ${ORDER_SERVICE_URL:http://localhost:8080}
+    customer-service-url: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
+    delivery-service-url: ${DELIVERY_SERVICE_URL:http://localhost:8083}
+    restaurant-service-url: ${RESTAURANT_SERVICE_URL:http://localhost:8082}
+    connect-timeout-seconds: ${MCP_CONNECT_TIMEOUT:5}
+    read-timeout-seconds: ${MCP_READ_TIMEOUT:10}

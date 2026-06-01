@@ -24,7 +24,7 @@ spring:
         sse:
           connections:
             food-delivery-mcp:
-              url: http://mcp-service:8090  # Docker default; override in application-local.yml
+              url: ${MCP_SERVICE_URL:http://mcp-service:8090}
 
 management:
   endpoints:
@@ -41,4 +41,4 @@ jwt:
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

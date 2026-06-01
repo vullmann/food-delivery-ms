@@ -15,7 +15,7 @@ spring:
   application:
     name: order-service
   datasource:
-    url: jdbc:postgresql://localhost:5433/orderdb   # later own DB
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:orderdb}
     username: ${SPRING_DATASOURCE_USERNAME:order}
     password: ${SPRING_DATASOURCE_PASSWORD:order}
   jpa:
@@ -27,12 +27,18 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  cloud:
+    aws:
+      sqs:
+        enabled: false
+      sns:
+        enabled: false
 
 eureka: # implement later
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

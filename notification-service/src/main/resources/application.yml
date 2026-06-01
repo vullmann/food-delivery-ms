@@ -5,7 +5,7 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5438/notificationdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5438}/${DB_NAME:notificationdb}
     username: ${SPRING_DATASOURCE_USERNAME:notification}
     password: ${SPRING_DATASOURCE_PASSWORD:notification}
   jpa:
@@ -16,6 +16,10 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  cloud:
+    aws:
+      sqs:
+        enabled: false
 
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID}
@@ -25,7 +29,7 @@ twilio:
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/
 
 management:
   endpoints:
