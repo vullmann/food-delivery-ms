@@ -1,5 +1,6 @@
 package de.ullmann.fooddelivery.notificationservice.kafka;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
+@Profile("!aws")
 public class NotificationEventConsumer {
 
     private final NotificationService notificationService;
@@ -64,7 +66,7 @@ public class NotificationEventConsumer {
     }
 
     @KafkaListener(topics = OrderReadyForDeliveryEvent.TOPIC, groupId = "notification-service-group", containerFactory = "orderInPreparationFactory")
-    public void onOrderInPreparation(OrderReadyForDeliveryEvent event) {
+    public void onOrderReadyForDelivery(OrderReadyForDeliveryEvent event) {
         String phone = phoneStore.getOrWarn(event.customerId());
         if (phone == null) return;
         notificationService.send(phone, "Your order is ready for delivery!");

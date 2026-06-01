@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import de.ullmann.fooddelivery.common.event.OrderConfirmedEvent;
 import de.ullmann.fooddelivery.common.event.OrderInPreparationEvent;
-import de.ullmann.fooddelivery.common.event.OrderOnTheWayEvent;
 import de.ullmann.fooddelivery.common.event.OrderPlacedEvent;
 import de.ullmann.fooddelivery.common.event.OrderReadyForDeliveryEvent;
 import de.ullmann.fooddelivery.common.event.RestaurantOrderCancelledEvent;
@@ -86,12 +85,6 @@ public class RestaurantOrderService {
                                 restaurantOrder.getRestaurantId(),
                                 restaurant.getAddress(), restaurantOrder.getDeliveryAddress(), LocalDateTime.now()));
             }
-            case PICKED_UP -> outboxEventService.createEvent(
-                    AGGREGATE_TYPE_RESTAURANT_ORDER,
-                    restaurantOrder.getCustomerOrderId(),
-                    OrderOnTheWayEvent.TOPIC,
-                    new OrderOnTheWayEvent(restaurantOrder.getCustomerOrderId(),
-                            restaurantOrder.getCustomerId(), LocalDateTime.now()));
             case CANCELLED -> outboxEventService.createEvent(
                     AGGREGATE_TYPE_RESTAURANT_ORDER,
                     restaurantOrder.getCustomerOrderId(),
@@ -101,6 +94,12 @@ public class RestaurantOrderService {
             default -> {
             }
         }
+    }
+
+    public void markAsPickedUp(UUID customerOrderId) {
+        RestaurantOrder order = restaurantOrderRepository.findByCustomerOrderId(customerOrderId)
+                .orElseThrow(() -> new RestaurantOrderNotFoundException(customerOrderId));
+        order.transitionTo(RestaurantOrderStatus.PICKED_UP);
     }
 
     @Transactional(readOnly = true)

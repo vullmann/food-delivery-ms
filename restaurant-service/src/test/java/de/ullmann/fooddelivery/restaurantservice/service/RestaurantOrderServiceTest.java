@@ -25,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import de.ullmann.fooddelivery.common.event.OrderConfirmedEvent;
 import de.ullmann.fooddelivery.common.event.OrderInPreparationEvent;
 import de.ullmann.fooddelivery.common.event.OrderItemDto;
-import de.ullmann.fooddelivery.common.event.OrderOnTheWayEvent;
 import de.ullmann.fooddelivery.common.event.OrderPlacedEvent;
 import de.ullmann.fooddelivery.common.event.OrderReadyForDeliveryEvent;
 import de.ullmann.fooddelivery.common.event.RestaurantOrderCancelledEvent;
@@ -200,20 +199,28 @@ class RestaurantOrderServiceTest {
                 .isInstanceOf(RestaurantNotFoundException.class);
     }
 
+    // ── markAsPickedUp ────────────────────────────────────────────────────────
+
     @Test
-    void updateStatus_toPickedUp_shouldPublishOrderOnTheWayEvent() {
+    void markAsPickedUp_shouldTransitionStatusToPickedUp() {
         RestaurantOrder order = RestaurantOrder.create(customerOrderId, restaurantId, customerId, deliveryAddress);
         order.transitionTo(RestaurantOrderStatus.CONFIRMED);
         order.transitionTo(RestaurantOrderStatus.PREPARING);
         order.transitionTo(RestaurantOrderStatus.READY_FOR_DELIVERY);
-        when(restaurantOrderRepository.findById(restaurantOrderId)).thenReturn(Optional.of(order));
+        when(restaurantOrderRepository.findByCustomerOrderId(customerOrderId)).thenReturn(Optional.of(order));
 
-        restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.PICKED_UP);
+        restaurantOrderService.markAsPickedUp(customerOrderId);
 
         assertThat(order.getStatus()).isEqualTo(RestaurantOrderStatus.PICKED_UP);
-        verify(outboxEventService).createEvent(
-                eq("RestaurantOrder"), eq(customerOrderId),
-                eq(OrderOnTheWayEvent.TOPIC), any(OrderOnTheWayEvent.class));
+        verify(outboxEventService, never()).createEvent(any(), any(), any(), any());
+    }
+
+    @Test
+    void markAsPickedUp_shouldThrow_whenOrderNotFound() {
+        when(restaurantOrderRepository.findByCustomerOrderId(customerOrderId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantOrderService.markAsPickedUp(customerOrderId))
+                .isInstanceOf(RestaurantOrderNotFoundException.class);
     }
 
     @Test

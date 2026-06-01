@@ -16,9 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import de.ullmann.fooddelivery.common.event.OrderPlacedEvent;
+import de.ullmann.fooddelivery.common.messaging.MessagePublisher;
 
 @ExtendWith(MockitoExtension.class)
 class OutboxEventProcessorTest {
@@ -27,7 +27,7 @@ class OutboxEventProcessorTest {
     private OutboxEventRepository outboxEventRepository;
 
     @Mock
-    private KafkaTemplate<String, String> outboxKafkaTemplate;
+    private MessagePublisher messagePublisher;
 
     @InjectMocks
     private OutboxEventProcessor outboxEventProcessor;
@@ -51,7 +51,7 @@ class OutboxEventProcessorTest {
 
         outboxEventProcessor.processNextBatch(100);
 
-        verify(outboxKafkaTemplate, times(1)).send(
+        verify(messagePublisher, times(1)).publish(
                 OrderPlacedEvent.TOPIC,
                 outboxEvent.getAggregateId().toString(),
                 outboxEvent.getPayload()
@@ -65,10 +65,6 @@ class OutboxEventProcessorTest {
 
         outboxEventProcessor.processNextBatch(100);
 
-        verify(outboxKafkaTemplate, never()).send(
-                anyString(),
-                anyString(),
-                anyString()
-        );
+        verify(messagePublisher, never()).publish(anyString(), anyString(), anyString());
     }
 }

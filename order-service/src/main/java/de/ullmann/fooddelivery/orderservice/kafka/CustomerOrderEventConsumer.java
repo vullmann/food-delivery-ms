@@ -2,6 +2,7 @@ package de.ullmann.fooddelivery.orderservice.kafka;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import de.ullmann.fooddelivery.orderservice.entity.CustomerOrderStatus;
 import de.ullmann.fooddelivery.orderservice.service.CustomerOrderService;
 
 @Component
+@Profile("!aws")
 public class CustomerOrderEventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(CustomerOrderEventConsumer.class);

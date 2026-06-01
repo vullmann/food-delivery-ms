@@ -2,17 +2,20 @@ package de.ullmann.fooddelivery.restaurantservice.kafka;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.serializer.DeserializationException;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
+import de.ullmann.fooddelivery.common.event.OrderOnTheWayEvent;
 import de.ullmann.fooddelivery.common.event.OrderPlacedEvent;
 import de.ullmann.fooddelivery.restaurantservice.service.RestaurantOrderService;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Component
+@Profile("!aws")
 public class OrderEventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(OrderEventConsumer.class);
@@ -36,5 +39,23 @@ public class OrderEventConsumer {
 
         log.info("Received OrderPlacedEvent for orderId={}", event.orderId());
         restaurantOrderService.receiveOrder(event);
+    }
+
+    @KafkaListener(
+            topics = OrderOnTheWayEvent.TOPIC,
+            groupId = "restaurant-service-group",
+            containerFactory = "orderOnTheWayFactory")
+    public void onOrderOnTheWay(
+            OrderOnTheWayEvent event,
+            @Header(value = "springDeserializedValueException", required = false)
+            DeserializationException ex) {
+
+        if (ex != null) {
+            log.error("Deserialisierungsfehler: {}", ex.getMessage());
+            return;
+        }
+
+        log.info("Received OrderOnTheWayEvent for orderId={}", event.orderId());
+        restaurantOrderService.markAsPickedUp(event.orderId());
     }
 }

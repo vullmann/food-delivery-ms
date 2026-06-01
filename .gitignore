@@ -48,3 +48,6 @@ kafka-event-flow-en.drawio
 .$kafka-event-flow-en.drawio.bkp
 .$kafka-event-flow-en.drawio.dtmp
 prompts.txt
+.claude/
+.mvn/
+/docker-compose.override.yml

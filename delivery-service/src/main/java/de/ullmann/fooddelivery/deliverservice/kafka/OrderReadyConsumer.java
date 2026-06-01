@@ -2,6 +2,7 @@ package de.ullmann.fooddelivery.deliverservice.kafka;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.serializer.DeserializationException;
 import org.springframework.messaging.handler.annotation.Header;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Component
+@Profile("!aws")
 public class OrderReadyConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(OrderReadyConsumer.class);

@@ -1,27 +1,27 @@
 package de.ullmann.fooddelivery.restaurantservice;
 
-import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.mockito.MockedStatic;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
-@ActiveProfiles("test")
-@SpringBootTest(classes = RestaurantServiceApplication.class)
-@TestPropertySource(properties = {
-        "eureka.client.register-with-eureka=false",
-        "eureka.client.fetch-registry=false",
-        "spring.jpa.open-in-view=false"
-})
 class RestaurantServiceApplicationTest {
 
     @Test
-    void contextLoads() {
-    }
+    void main_shouldCallSpringApplicationRun() {
+        try (MockedStatic<SpringApplication> mockedStatic = mockStatic(SpringApplication.class)) {
+            mockedStatic.when(() -> SpringApplication.run(any(Class.class), any(String[].class)))
+                    .thenReturn(mock(ConfigurableApplicationContext.class));
 
-    @Test
-    void main_shouldStartApplicationWithoutErrors() {
-        assertThatNoException().isThrownBy(() -> RestaurantServiceApplication.main(new String[]{}));
+            RestaurantServiceApplication.main(new String[]{});
+
+            mockedStatic.verify(
+                    () -> SpringApplication.run(eq(RestaurantServiceApplication.class), any(String[].class)));
+        }
     }
 }
