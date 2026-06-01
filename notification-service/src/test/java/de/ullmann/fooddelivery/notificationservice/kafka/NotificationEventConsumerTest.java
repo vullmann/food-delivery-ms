@@ -146,7 +146,7 @@ class NotificationEventConsumerTest {
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(UUID.randomUUID(), CUSTOMER_ID, RESTAURANT_ID,
                 PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now());
 
-        consumer.onOrderInPreparation(event);
+        consumer.onOrderReadyForDelivery(event);
 
         verify(notificationService).send(eq(PHONE), anyString());
     }
@@ -157,7 +157,7 @@ class NotificationEventConsumerTest {
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(UUID.randomUUID(), CUSTOMER_ID, RESTAURANT_ID,
                 PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now());
 
-        consumer.onOrderInPreparation(event);
+        consumer.onOrderReadyForDelivery(event);
 
         verify(notificationService, never()).send(anyString(), anyString());
     }

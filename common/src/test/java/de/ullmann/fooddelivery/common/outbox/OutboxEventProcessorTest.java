@@ -1,8 +1,11 @@
 package de.ullmann.fooddelivery.common.outbox;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,5 +69,17 @@ class OutboxEventProcessorTest {
         outboxEventProcessor.processNextBatch(100);
 
         verify(messagePublisher, never()).publish(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void processNextBatch_shouldNotSetProcessedAtWhenPublishFails() {
+        when(outboxEventRepository.findTopUnprocessedEvents(anyInt())).thenReturn(List.of(outboxEvent));
+        doThrow(new RuntimeException("Kafka unavailable"))
+                .when(messagePublisher).publish(anyString(), anyString(), anyString());
+
+        int result = outboxEventProcessor.processNextBatch(100);
+
+        assertNull(outboxEvent.getProcessedAt());
+        assertEquals(1, result);
     }
 }
