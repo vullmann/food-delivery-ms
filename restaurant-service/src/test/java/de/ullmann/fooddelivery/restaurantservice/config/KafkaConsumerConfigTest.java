@@ -29,4 +29,16 @@ class KafkaConsumerConfigTest {
         ConcurrentKafkaListenerContainerFactory<?, ?> factory = config.orderPlacedFactory();
         assertThat(factory).isNotNull();
     }
+
+    @Test
+    void orderOnTheWayConsumerFactory_shouldReturnFactory() {
+        ConsumerFactory<?, ?> factory = config.orderOnTheWayConsumerFactory();
+        assertThat(factory).isNotNull();
+    }
+
+    @Test
+    void orderOnTheWayFactory_shouldReturnFactory() {
+        ConcurrentKafkaListenerContainerFactory<?, ?> factory = config.orderOnTheWayFactory();
+        assertThat(factory).isNotNull();
+    }
 }

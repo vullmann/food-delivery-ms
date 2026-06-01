@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.UUID;
 
@@ -38,7 +39,8 @@ class OrderEventConsumerTest {
 
     @Test
     void onOrderPlaced_whenExIsNotNull_shouldNotCallReceiveOrder() {
-        DeserializationException ex = new DeserializationException("deserialization failed", new byte[0], false, new RuntimeException());
+        DeserializationException ex = new DeserializationException("deserialization failed", new byte[0], false,
+                new RuntimeException());
 
         orderEventConsumer.onOrderPlaced(null, ex);
 
@@ -58,7 +60,8 @@ class OrderEventConsumerTest {
 
     @Test
     void onOrderOnTheWay_whenExIsNotNull_shouldNotCallMarkAsPickedUp() {
-        DeserializationException ex = new DeserializationException("deserialization failed", new byte[0], false, new RuntimeException());
+        DeserializationException ex = new DeserializationException("deserialization failed", new byte[0], false,
+                new RuntimeException());
 
         orderEventConsumer.onOrderOnTheWay(null, ex);
 
