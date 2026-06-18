@@ -32,16 +32,12 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
         <dependency>
-            <!-- optional: prevents transitive propagation; consuming services add it explicitly -->
             <groupId>io.awspring.cloud</groupId>
             <artifactId>spring-cloud-aws-starter-sqs</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
-            <!-- optional: prevents transitive propagation; producing services add it explicitly -->
             <groupId>io.awspring.cloud</groupId>
             <artifactId>spring-cloud-aws-starter-sns</artifactId>
-            <optional>true</optional>
         </dependency>
         <!-- Bean Validation Annotations für @NotBlank, @Pattern etc. -->
         <dependency>
