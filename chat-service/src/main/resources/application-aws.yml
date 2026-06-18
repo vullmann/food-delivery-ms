@@ -4,12 +4,20 @@
 # -------------------------------------------------------
 spring:
   ai:
+    model:
+      chat: bedrock-converse
     bedrock:
       aws:
         region: ${AWS_REGION:eu-central-1}
-        access-key: ${AWS_ACCESS_KEY_ID}
-        secret-key: ${AWS_SECRET_ACCESS_KEY}
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
       converse:
         chat:
           options:
             model: anthropic.claude-3-5-sonnet-20241022-v2:0
+    mcp:
+      client:
+        sse:
+          connections:
+            food-delivery-mcp:
+              url: http://mcp-service.food-delivery.local:8090
