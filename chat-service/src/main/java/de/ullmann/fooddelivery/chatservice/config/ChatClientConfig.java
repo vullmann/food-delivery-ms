@@ -17,7 +17,6 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 
 import de.ullmann.fooddelivery.chatservice.service.OrderIdStore;
 
@@ -68,21 +67,7 @@ public class ChatClientConfig {
     }
 
     @Bean
-    @Profile("local")
-    public ChatClient localChatClient(
-            ChatModel chatModel,
-            SyncMcpToolCallbackProvider toolCallbackProvider,
-            OrderIdStore orderIdStore) {
-        return ChatClient.builder(chatModel)
-                .defaultSystem(SYSTEM_PROMPT)
-                .defaultAdvisors(new SimpleLoggerAdvisor())
-                .defaultToolCallbacks(wrapTools(toolCallbackProvider.getToolCallbacks(), orderIdStore))
-                .build();
-    }
-
-    @Bean
-    @Profile("aws")
-    public ChatClient awsChatClient(
+    public ChatClient chatClient(
             ChatModel chatModel,
             SyncMcpToolCallbackProvider toolCallbackProvider,
             OrderIdStore orderIdStore) {

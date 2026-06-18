@@ -42,23 +42,12 @@ class ChatClientConfigTest {
     // ------------------------------------------------------------------
 
     @Test
-    void localChatClient_shouldReturnNonNullChatClient() {
+    void chatClient_shouldReturnNonNullChatClient() {
         ChatModel model = mock(ChatModel.class);
         SyncMcpToolCallbackProvider provider = mock(SyncMcpToolCallbackProvider.class);
         when(provider.getToolCallbacks()).thenReturn(new ToolCallback[0]);
 
-        ChatClient client = config.localChatClient(model, provider, new OrderIdStore());
-
-        assertThat(client).isNotNull();
-    }
-
-    @Test
-    void awsChatClient_shouldReturnNonNullChatClient() {
-        ChatModel model = mock(ChatModel.class);
-        SyncMcpToolCallbackProvider provider = mock(SyncMcpToolCallbackProvider.class);
-        when(provider.getToolCallbacks()).thenReturn(new ToolCallback[0]);
-
-        ChatClient client = config.awsChatClient(model, provider, new OrderIdStore());
+        ChatClient client = config.chatClient(model, provider, new OrderIdStore());
 
         assertThat(client).isNotNull();
     }
