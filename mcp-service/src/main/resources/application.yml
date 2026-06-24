@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: mcp-service
+  cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
   ai:
     mcp:
       server:
@@ -23,6 +29,8 @@ management:
       enabled: false
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

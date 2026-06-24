@@ -17,6 +17,11 @@ spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
     aws:
       sqs:
         enabled: false
@@ -27,6 +32,8 @@ twilio:
   whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

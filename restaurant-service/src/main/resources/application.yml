@@ -26,6 +26,11 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
   cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
     aws:
       sqs:
         enabled: false
@@ -42,6 +47,8 @@ management:
       show-details: always
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

@@ -5,6 +5,11 @@ spring:
   application:
     name: api-gateway
   cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
     gateway:
       server:
         webflux:
@@ -50,6 +55,8 @@ jwt:
   secret: ${JWT_SECRET}
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

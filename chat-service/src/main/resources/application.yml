@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: chat-service
+  cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
   ai:
     google:
       genai:
@@ -39,6 +45,8 @@ jwt:
   secret: ${JWT_SECRET}
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/

@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: auth-service
+  cloud:
+    inetutils:
+      ignored-interfaces:
+        - ecs-eth0
+      preferred-networks:
+        - 10.0
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5437}/${DB_NAME:authdb}
     username: ${SPRING_DATASOURCE_USERNAME:auth}
@@ -21,6 +27,8 @@ spring:
       mode: always
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:discovery-server}:8761/eureka/
