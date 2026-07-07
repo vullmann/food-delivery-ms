@@ -32,6 +32,8 @@ spring:
       preferred-networks:
         - 10.0
     aws:
+      region:
+        static: ${AWS_REGION:eu-central-1}
       sns:
         enabled: false
 
@@ -43,6 +45,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+jwt:
+  secret: ${JWT_SECRET}
 
 eureka:
   instance:

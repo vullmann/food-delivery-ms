@@ -2,6 +2,10 @@
 # Local profile: Gemini via Google AI Studio
 # -------------------------------------------------------
 spring:
+  cloud:
+    aws:
+      region:
+        static: eu-central-1
   ai:
     mcp:
       client:

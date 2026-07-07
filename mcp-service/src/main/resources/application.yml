@@ -28,6 +28,9 @@ management:
     eureka:
       enabled: false
 
+jwt:
+  secret: ${JWT_SECRET}
+
 eureka:
   instance:
     prefer-ip-address: true

@@ -38,10 +38,15 @@ spring:
       preferred-networks:
         - 10.0
     aws:
+      region:
+        static: ${AWS_REGION:eu-central-1}
       sqs:
         enabled: false
       sns:
         enabled: false
+
+jwt:
+  secret: ${JWT_SECRET}
 
 eureka:
   instance:

@@ -23,6 +23,8 @@ spring:
       preferred-networks:
         - 10.0
     aws:
+      region:
+        static: ${AWS_REGION:eu-central-1}
       sqs:
         enabled: false
 
@@ -30,6 +32,9 @@ twilio:
   account-sid: ${TWILIO_ACCOUNT_SID}
   auth-token: ${TWILIO_AUTH_TOKEN}
   whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+
+jwt:
+  secret: ${JWT_SECRET}
 
 eureka:
   instance:

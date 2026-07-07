@@ -38,8 +38,9 @@ services:
       DB_PORT: 5432
       DB_NAME: customerdb
       SPRING_DATASOURCE_USERNAME: customer
-      SPRING_DATASOURCE_PASSWORD: customerF
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092F
+      SPRING_DATASOURCE_PASSWORD: customer
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres-customer
       - kafka
@@ -70,6 +71,7 @@ services:
       SPRING_DATASOURCE_USERNAME: restaurant
       SPRING_DATASOURCE_PASSWORD: restaurant
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres-restaurant
       - kafka
@@ -100,6 +102,7 @@ services:
       SPRING_DATASOURCE_USERNAME: orderuser
       SPRING_DATASOURCE_PASSWORD: order
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres-order
       - kafka
@@ -130,6 +133,7 @@ services:
       SPRING_DATASOURCE_USERNAME: delivery
       SPRING_DATASOURCE_PASSWORD: delivery
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres-delivery
       - kafka
@@ -189,6 +193,7 @@ services:
       CUSTOMER_SERVICE_URL: http://customer-service:8081
       DELIVERY_SERVICE_URL: http://delivery-service:8083
       RESTAURANT_SERVICE_URL: http://restaurant-service:8082
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - order-service
       - customer-service
@@ -231,6 +236,7 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_WHATSAPP_FROM: "whatsapp:+14155238886"
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres-notification
       - kafka
