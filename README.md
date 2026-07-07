@@ -16,20 +16,12 @@ External client (HTTP :8088)
         ├──► delivery-service    (8083)  /deliveries/**    (JWT)
         │                                /drivers/**       (JWT)
         └──► chat-service        (8085)  /chat/**          (JWT)
-                  └──SSE──► mcp-service (8090) ──REST──► customer/order/delivery/restaurant services
+                  └──► mcp-service (8090) ─ REST ──► all services
 
-Messaging  (Kafka locally · SNS + SQS on AWS)
-
-  customer-service   ── customer.created / profile.updated ──────────────────► notification-service
-
-  order-service      ── order.placed ──────────────────────────────────────► restaurant-service
-
-  restaurant-service ── order.confirmed / in.preparation / cancelled ──────► order-service
-                     │                                                     └► notification-service
-                     └── order.ready.for.delivery ──────────────────────► delivery-service
-
-  delivery-service   ── driver.assigned / on.the.way / delivered / cancelled ──► order-service
-                                                                              └► notification-service
+Kafka (internal)
+    order-service ──► restaurant-service ──► delivery-service
+                                         └──► order-service (status updates)
+                                         └──► notification-service (WhatsApp)
 
 discovery-server (8761) ← all services register here
 ```
@@ -45,7 +37,7 @@ discovery-server (8761) ← all services register here
 | order-service        | 8080 | Place and track customer orders                  |
 | delivery-service     | 8083 | Driver and delivery management                   |
 | notification-service | 8087 | WhatsApp notifications via Twilio                |
-| chat-service         | 8085 | AI chat with MCP tool access (Gemini locally · Bedrock on AWS) |
+| chat-service         | 8085 | AI chat (Google Gemini) with MCP tool access     |
 | mcp-service          | 8090 | MCP server exposing order/customer/delivery data |
 | discovery-server     | 8761 | Eureka service registry                          |
 
@@ -53,11 +45,11 @@ discovery-server (8761) ← all services register here
 
 - **Java 21** · **Spring Boot 4.0.3** · **Spring Cloud 2025.1.1**
 - **PostgreSQL 16** — one database per service
-- **Apache Kafka** (KRaft mode) locally · **AWS SNS + SQS** on AWS
+- **Apache Kafka** (KRaft mode, Confluent 7.7.0)
 - **Eureka** for service discovery
-- **Spring AI** — Google Gemini (`gemini-2.0-flash`) locally · Amazon Bedrock (Claude 3.5 Sonnet) on AWS
+- **Spring AI** + **Google Gemini** (`gemini-2.0-flash`) for the chat service
 - **Twilio** for WhatsApp notifications
-- **Docker Compose** for local development
+- **Docker Compose** for the full stack
 
 ## Getting Started
 
@@ -88,7 +80,7 @@ docker compose up --build
 ### Run Infrastructure Only (for local development)
 
 ```bash
-docker compose up kafka postgres-customer postgres-restaurant postgres-order postgres-delivery postgres-auth postgres-notification discovery-server
+docker compose up zookeeper kafka postgres-customer postgres-restaurant postgres-order postgres-delivery postgres-auth postgres-notification discovery-server
 ```
 
 ## API Overview
@@ -106,53 +98,53 @@ Use `/auth/register` or `/auth/login` first to obtain a JWT, then include it as 
 
 ### Customers
 
-| Method | Path              | Auth | Description           |
-|--------|-------------------|------|-----------------------|
-| POST   | /customers        | JWT  | Create customer       |
-| GET    | /customers/{id}   | JWT  | Get customer by ID    |
-| GET    | /customers?email= | JWT  | Get customer by email |
-| PUT    | /customers/{id}   | JWT  | Update customer       |
-| DELETE | /customers/{id}   | JWT  | Delete customer       |
+| Method | Path                  | Auth | Description             |
+|--------|-----------------------|------|-------------------------|
+| POST   | /customers            | JWT  | Create customer         |
+| GET    | /customers/{id}       | JWT  | Get customer by ID      |
+| GET    | /customers?email=     | JWT  | Get customer by email   |
+| PUT    | /customers/{id}       | JWT  | Update customer         |
+| DELETE | /customers/{id}       | JWT  | Delete customer         |
 
 ### Restaurants
 
-| Method | Path                                      | Auth | Description                    |
-|--------|-------------------------------------------|------|--------------------------------|
-| POST   | /restaurants                              | JWT  | Create restaurant              |
-| GET    | /restaurants/{id}                         | JWT  | Get restaurant by ID           |
-| GET    | /restaurants?cuisineType=                 | JWT  | Filter by cuisine type         |
-| GET    | /restaurants?isOpen=                      | JWT  | Filter by availability         |
-| PUT    | /restaurants/{id}                         | JWT  | Update restaurant              |
-| DELETE | /restaurants/{id}                         | JWT  | Delete restaurant              |
-| POST   | /restaurants/{id}/menu-items              | JWT  | Add menu item                  |
-| GET    | /restaurants/{id}/menu-items              | JWT  | List menu items                |
-| GET    | /restaurants/{id}/menu-items/{itemId}     | JWT  | Get menu item                  |
-| PUT    | /restaurants/{id}/menu-items/{itemId}     | JWT  | Update menu item               |
-| DELETE | /restaurants/{id}/menu-items/{itemId}     | JWT  | Delete menu item               |
-| GET    | /restaurants/{id}/orders                  | JWT  | All orders for a restaurant    |
-| PATCH  | /restaurants/{id}/orders/{orderId}/status | JWT  | Update restaurant order status |
+| Method | Path                                                | Auth | Description                   |
+|--------|-----------------------------------------------------|------|-------------------------------|
+| POST   | /restaurants                                        | JWT  | Create restaurant             |
+| GET    | /restaurants/{id}                                   | JWT  | Get restaurant by ID          |
+| GET    | /restaurants?cuisineType=                           | JWT  | Filter by cuisine type        |
+| GET    | /restaurants?isOpen=                                | JWT  | Filter by availability        |
+| PUT    | /restaurants/{id}                                   | JWT  | Update restaurant             |
+| DELETE | /restaurants/{id}                                   | JWT  | Delete restaurant             |
+| POST   | /restaurants/{id}/menu-items                        | JWT  | Add menu item                 |
+| GET    | /restaurants/{id}/menu-items                        | JWT  | List menu items               |
+| GET    | /restaurants/{id}/menu-items/{itemId}               | JWT  | Get menu item                 |
+| PUT    | /restaurants/{id}/menu-items/{itemId}               | JWT  | Update menu item              |
+| DELETE | /restaurants/{id}/menu-items/{itemId}               | JWT  | Delete menu item              |
+| GET    | /restaurants/{id}/orders                            | JWT  | All orders for a restaurant   |
+| PATCH  | /restaurants/{id}/orders/{orderId}/status           | JWT  | Update restaurant order status|
 
 ### Orders
 
-| Method | Path                          | Auth | Description             |
-|--------|-------------------------------|------|-------------------------|
-| POST   | /orders                       | JWT  | Place order             |
-| GET    | /orders/{id}                  | JWT  | Get order by ID         |
-| GET    | /orders/customer/{customerId} | JWT  | All orders for customer |
-| PATCH  | /orders/{id}/status           | JWT  | Update order status     |
+| Method | Path                          | Auth | Description              |
+|--------|-------------------------------|------|--------------------------|
+| POST   | /orders                       | JWT  | Place order              |
+| GET    | /orders/{id}                  | JWT  | Get order by ID          |
+| GET    | /orders/customer/{customerId} | JWT  | All orders for customer  |
+| PATCH  | /orders/{id}/status           | JWT  | Update order status      |
 
 ### Deliveries & Drivers
 
-| Method | Path                    | Auth | Description                      |
-|--------|-------------------------|------|----------------------------------|
-| GET    | /deliveries/{id}        | JWT  | Get delivery by ID               |
-| GET    | /deliveries?orderId=    | JWT  | Get delivery by order ID         |
-| PATCH  | /deliveries/{id}/status | JWT  | Update delivery status           |
-| POST   | /drivers                | JWT  | Register driver                  |
-| GET    | /drivers                | JWT  | List drivers (optional ?status=) |
-| GET    | /drivers/{id}           | JWT  | Get driver by ID                 |
-| PATCH  | /drivers/{id}/status    | JWT  | Update driver status             |
-| DELETE | /drivers/{id}           | JWT  | Delete driver                    |
+| Method | Path                      | Auth | Description                       |
+|--------|---------------------------|------|-----------------------------------|
+| GET    | /deliveries/{id}          | JWT  | Get delivery by ID                |
+| GET    | /deliveries?orderId=      | JWT  | Get delivery by order ID          |
+| PATCH  | /deliveries/{id}/status   | JWT  | Update delivery status            |
+| POST   | /drivers                  | JWT  | Register driver                   |
+| GET    | /drivers                  | JWT  | List drivers (optional ?status=)  |
+| GET    | /drivers/{id}             | JWT  | Get driver by ID                  |
+| PATCH  | /drivers/{id}/status      | JWT  | Update driver status              |
+| DELETE | /drivers/{id}             | JWT  | Delete driver                     |
 
 ### Chat
 
@@ -174,11 +166,11 @@ Open it locally, log in via the Auth tab to get a JWT, then explore every endpoi
 
 The following accounts are pre-loaded and ready to use:
 
-| Name        | Email                    | Password    |
-|-------------|--------------------------|-------------|
-| Anna Müller | anna.mueller@example.com | password123 |
-| Ben Schmidt | ben.schmidt@example.com  | password123 |
-| Clara Weber | clara.weber@example.com  | password123 |
+| Name         | Email                      | Password    |
+|--------------|----------------------------|-------------|
+| Anna Müller  | anna.mueller@example.com   | password123 |
+| Ben Schmidt  | ben.schmidt@example.com    | password123 |
+| Clara Weber  | clara.weber@example.com    | password123 |
 
 Three restaurants (Bella Italia, Burger Palace, Tokyo Garden) and three drivers are also pre-loaded.
 
