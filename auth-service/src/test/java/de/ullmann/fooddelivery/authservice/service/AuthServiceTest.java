@@ -40,6 +40,7 @@ import de.ullmann.fooddelivery.authservice.exception.EmailAlreadyRegisteredExcep
 import de.ullmann.fooddelivery.authservice.exception.InvalidCredentialsException;
 import de.ullmann.fooddelivery.authservice.exception.InvalidTokenException;
 import de.ullmann.fooddelivery.authservice.repository.UserCredentialRepository;
+import de.ullmann.fooddelivery.common.security.Role;
 import io.jsonwebtoken.Claims;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,7 +63,7 @@ class AuthServiceTest {
 
     private MockRestServiceServer server;
 
-    private static final UUID CUSTOMER_ID = UUID.randomUUID();
+    private static final UUID USER_ID = UUID.randomUUID();
     private static final String EMAIL = "user@example.com";
     private static final AddressRequest ADDRESS = new AddressRequest("Main St", "1", "Berlin", "10115", "Germany");
 
@@ -98,7 +99,7 @@ class AuthServiceTest {
     void register_success_shouldReturnAuthResponse() {
         when(credentialRepository.existsByEmail(EMAIL)).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(jwtService.generateToken(any(), anyString())).thenReturn("jwt-token");
+        when(jwtService.generateToken(any(), anyString(), any())).thenReturn("jwt-token");
 
         // 1. create the chain mocks
         RestClient restClient = mock(RestClient.class);
@@ -112,7 +113,7 @@ class AuthServiceTest {
         when(requestBodySpec.body(any(CustomerCreateRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
 
-        CustomerCreateResponse customerResponse = new CustomerCreateResponse(CUSTOMER_ID, "John", "Doe", EMAIL,
+        CustomerCreateResponse customerResponse = new CustomerCreateResponse(USER_ID, "John", "Doe", EMAIL,
                 "+49123", ADDRESS);
         when(responseSpec.body(CustomerCreateResponse.class)).thenReturn(customerResponse);
 
@@ -122,7 +123,7 @@ class AuthServiceTest {
         AuthResponse response = service.register(req);
 
         assertThat(response.token()).isEqualTo("jwt-token");
-        assertThat(response.customerId()).isEqualTo(CUSTOMER_ID);
+        assertThat(response.userId()).isEqualTo(USER_ID);
         assertThat(response.email()).isEqualTo(EMAIL);
     }
 
@@ -137,7 +138,7 @@ class AuthServiceTest {
 
     @Test
     void login_whenPasswordMismatch_shouldThrow() {
-        UserCredential credential = UserCredential.create(CUSTOMER_ID, EMAIL, "hashed");
+        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed");
         when(credentialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credential));
         when(passwordEncoder.matches("wrongpassword", "hashed")).thenReturn(false);
         LoginRequest req = new LoginRequest(EMAIL, "wrongpassword");
@@ -148,28 +149,28 @@ class AuthServiceTest {
 
     @Test
     void login_success_shouldReturnAuthResponse() {
-        UserCredential credential = UserCredential.create(CUSTOMER_ID, EMAIL, "hashed");
+        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed");
         when(credentialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credential));
         when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
-        when(jwtService.generateToken(CUSTOMER_ID, EMAIL)).thenReturn("jwt-token");
+        when(jwtService.generateToken(USER_ID, EMAIL, Role.CUSTOMER)).thenReturn("jwt-token");
         LoginRequest req = new LoginRequest(EMAIL, "secret");
 
         AuthResponse response = authService.login(req);
 
         assertThat(response.token()).isEqualTo("jwt-token");
-        assertThat(response.customerId()).isEqualTo(CUSTOMER_ID);
+        assertThat(response.userId()).isEqualTo(USER_ID);
     }
 
     @Test
     void validate_validToken_shouldReturnValidateResponse() {
         Claims claims = mock(Claims.class);
-        when(claims.getSubject()).thenReturn(CUSTOMER_ID.toString());
+        when(claims.getSubject()).thenReturn(USER_ID.toString());
         when(claims.get("email", String.class)).thenReturn(EMAIL);
         when(jwtService.validateToken("valid-token")).thenReturn(claims);
 
         ValidateResponse response = authService.validate("valid-token");
 
-        assertThat(response.customerId()).isEqualTo(CUSTOMER_ID);
+        assertThat(response.userId()).isEqualTo(USER_ID);
         assertThat(response.email()).isEqualTo(EMAIL);
     }
 
@@ -178,6 +179,16 @@ class AuthServiceTest {
         when(jwtService.validateToken("bad-token")).thenThrow(new io.jsonwebtoken.JwtException("bad"));
 
         assertThatThrownBy(() -> authService.validate("bad-token"))
+                .isInstanceOf(InvalidTokenException.class);
+    }
+
+    @Test
+    void validate_malformedSubject_shouldThrowInvalidTokenException() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("not-a-uuid");
+        when(jwtService.validateToken("malformed-subject-token")).thenReturn(claims);
+
+        assertThatThrownBy(() -> authService.validate("malformed-subject-token"))
                 .isInstanceOf(InvalidTokenException.class);
     }
 

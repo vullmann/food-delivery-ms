@@ -24,6 +24,11 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    @ExceptionHandler(InsufficientRoleException.class)
+    ProblemDetail handleInsufficientRole(InsufficientRoleException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(CustomerServiceException.class)
     ProblemDetail handleCustomerService(CustomerServiceException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, ex.getMessage());

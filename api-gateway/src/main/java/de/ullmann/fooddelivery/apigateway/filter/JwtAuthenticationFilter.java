@@ -40,7 +40,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    public Mono<Void> filter(
+            ServerWebExchange exchange,
+            GatewayFilterChain chain) {
         if (CorsUtils.isPreFlightRequest(exchange.getRequest())) {
             return chain.filter(exchange);
         }
@@ -67,8 +69,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .getPayload();
 
             ServerHttpRequest mutated = exchange.getRequest().mutate()
-                    .header("X-Customer-Id", claims.getSubject())
-                    .header("X-Customer-Email", claims.get("email", String.class))
+                    .header("X-User-Id", claims.getSubject())
+                    .header("X-User-Email", claims.get("email", String.class))
                     .build();
 
             return chain.filter(exchange.mutate().request(mutated).build());

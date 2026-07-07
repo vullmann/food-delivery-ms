@@ -20,6 +20,7 @@ import de.ullmann.fooddelivery.authservice.dto.RegisterRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.service.AuthService;
+import de.ullmann.fooddelivery.common.security.JwtUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,6 +38,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private JwtUtils jwtUtils;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 

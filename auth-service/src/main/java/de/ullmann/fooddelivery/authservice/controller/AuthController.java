@@ -3,6 +3,8 @@ package de.ullmann.fooddelivery.authservice.controller;
 import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
+import de.ullmann.fooddelivery.authservice.dto.StaffResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.service.AuthService;
@@ -33,6 +35,12 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@RequestBody @Valid LoginRequest req) {
         return authService.login(req);
+    }
+
+    @PostMapping("/staff")
+    @ResponseStatus(HttpStatus.CREATED)
+    public StaffResponse registerStaff(@RequestBody @Valid RegisterStaffRequest req) {
+        return authService.registerStaff(req);
     }
 
     @PostMapping("/validate")

@@ -1,7 +1,9 @@
 package de.ullmann.fooddelivery.apigateway.filter;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
 import javax.crypto.SecretKey;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +20,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import reactor.core.publisher.Mono;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtAuthenticationFilterTest {
 
@@ -131,9 +131,9 @@ class JwtAuthenticationFilterTest {
         filter.filter(exchange, chain).block();
 
         assertThat(capturedExchange.get()).isNotNull();
-        assertThat(capturedExchange.get().getRequest().getHeaders().getFirst("X-Customer-Id"))
+        assertThat(capturedExchange.get().getRequest().getHeaders().getFirst("X-User-Id"))
                 .isEqualTo(TEST_CUSTOMER_ID);
-        assertThat(capturedExchange.get().getRequest().getHeaders().getFirst("X-Customer-Email"))
+        assertThat(capturedExchange.get().getRequest().getHeaders().getFirst("X-User-Email"))
                 .isEqualTo(TEST_EMAIL);
     }
 

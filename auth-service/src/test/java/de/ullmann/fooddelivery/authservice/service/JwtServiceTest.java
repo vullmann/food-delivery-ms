@@ -1,15 +1,15 @@
 package de.ullmann.fooddelivery.authservice.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import de.ullmann.fooddelivery.common.security.Role;
 import io.jsonwebtoken.Claims;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtServiceTest {
 
@@ -25,27 +25,46 @@ class JwtServiceTest {
     }
 
     @Test
-    void generateToken_shouldReturnNonBlankToken() {
-        UUID customerId = UUID.randomUUID();
-        String token = jwtService.generateToken(customerId, "user@example.com");
-        assertThat(token).isNotBlank();
+    void generateToken_shouldEmbedSubjectEmailAndRole() {
+        UUID userId = UUID.randomUUID();
+        String email = "user@example.com";
+
+        String token = jwtService.generateToken(userId, email, Role.CUSTOMER);
+
+        Claims claims = jwtService.validateToken(token);
+        assertThat(claims.getSubject()).isEqualTo(userId.toString());
+        assertThat(claims.get("email", String.class)).isEqualTo(email);
+        assertThat(claims.get("role", String.class)).isEqualTo("CUSTOMER");
+        assertThat(claims.getIssuedAt()).isNotNull();
+        assertThat(claims.getExpiration()).isAfter(claims.getIssuedAt());
     }
 
     @Test
-    void validateToken_shouldReturnClaimsWithCorrectSubjectAndEmail() {
-        UUID customerId = UUID.randomUUID();
+    void generateToken_withSuperAdminRole_shouldEmbedCorrectRole() {
+        UUID userId = UUID.randomUUID();
+
+        String token = jwtService.generateToken(userId, "admin@example.com", Role.SUPER_ADMIN);
+
+        Claims claims = jwtService.validateToken(token);
+        assertThat(claims.get("role", String.class)).isEqualTo("SUPER_ADMIN");
+    }
+
+    @Test
+    void validateToken_shouldReturnClaimsWithCorrectSubjectAndEmailAndRole() {
+        UUID userId = UUID.randomUUID();
         String email = "user@example.com";
-        String token = jwtService.generateToken(customerId, email);
+        String token = jwtService.generateToken(userId, email, Role.SUPER_ADMIN);
 
         Claims claims = jwtService.validateToken(token);
 
-        assertThat(claims.getSubject()).isEqualTo(customerId.toString());
+        assertThat(claims.getSubject()).isEqualTo(userId.toString());
         assertThat(claims.get("email", String.class)).isEqualTo(email);
+        assertThat(claims.get("role", String.class)).isEqualTo("SUPER_ADMIN");
     }
 
     @Test
-    void validateToken_withInvalidToken_shouldThrowException() {
+    void validateToken_withInvalidToken_shouldThrowJwtException() {
         assertThatThrownBy(() -> jwtService.validateToken("invalid.token.here"))
-                .isInstanceOf(Exception.class);
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
     }
 }

@@ -2,4 +2,5 @@ package de.ullmann.fooddelivery.authservice.dto;
 
 import java.util.UUID;
 
-public record AuthResponse(String token, UUID customerId, String email) {}
+public record AuthResponse(String token, UUID userId, String email) {
+}
