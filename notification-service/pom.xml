@@ -18,7 +18,12 @@
     <dependencies>
         <dependency>
             <groupId>de.ullmann</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>common-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>de.ullmann</groupId>
+            <artifactId>common-messaging</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
