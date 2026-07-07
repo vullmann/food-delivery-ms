@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "description": "Bulk-edit JSON for ECS task definition environment variables and secrets. For each service, paste the 'environment' array into the ECS Console → Task Definition → Container → Environment variables (Bulk edit JSON) and the 'secrets' array into the Secrets section.",
+    "secrets_manager_setup": {
+      "secret_name": "food-delivery/config",
+      "keys": ["JWT_SECRET", "GOOGLE_AI_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM", "DB_PASSWORD"]
+    },
+    "iam_task_roles": {
+      "sns-sqs-services": {
+        "services": ["customer-service", "restaurant-service", "order-service", "delivery-service", "notification-service"],
+        "required_permissions": ["sns:Publish", "sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+      },
+      "chat-service": {
+        "required_permissions": ["bedrock:InvokeModel"],
+        "note": "Attach a task role with bedrock:InvokeModel — no AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY needed when using IAM task roles"
+      }
+    }
+  },
+
+  "discovery-server": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "EUREKA_HOSTNAME", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": []
+  },
+
+  "customer-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "customerdb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "customer" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" }
+    ]
+  },
+
+  "restaurant-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "restaurantdb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "restaurant" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" }
+    ]
+  },
+
+  "order-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "orderdb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "orderuser" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" }
+    ]
+  },
+
+  "delivery-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "deliverydb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "delivery" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" }
+    ]
+  },
+
+  "auth-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "authdb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "auth" },
+      { "name": "CUSTOMER_SERVICE_URL", "value": "http://customer-service.food-delivery.local:8081" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" },
+      { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:JWT_SECRET::" }
+    ]
+  },
+
+  "notification-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "DB_HOST", "value": "database-food-delivery.cr0kwiyo0hyu.eu-central-1.rds.amazonaws.com" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_NAME", "value": "notificationdb" },
+      { "name": "SPRING_DATASOURCE_USERNAME", "value": "notification" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:DB_PASSWORD::" },
+      { "name": "TWILIO_ACCOUNT_SID", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:TWILIO_ACCOUNT_SID::" },
+      { "name": "TWILIO_AUTH_TOKEN", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:TWILIO_AUTH_TOKEN::" },
+      { "name": "TWILIO_WHATSAPP_FROM", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:TWILIO_WHATSAPP_FROM::" }
+    ]
+  },
+
+  "mcp-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "ORDER_SERVICE_URL", "value": "http://order-service.food-delivery.local:8080" },
+      { "name": "CUSTOMER_SERVICE_URL", "value": "http://customer-service.food-delivery.local:8081" },
+      { "name": "DELIVERY_SERVICE_URL", "value": "http://delivery-service.food-delivery.local:8083" },
+      { "name": "RESTAURANT_SERVICE_URL", "value": "http://restaurant-service.food-delivery.local:8082" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": []
+  },
+
+  "api-gateway": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:JWT_SECRET::" }
+    ]
+  },
+
+  "chat-service": {
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+      { "name": "AWS_REGION", "value": "eu-central-1" },
+      { "name": "MCP_SERVICE_URL", "value": "http://mcp-service.food-delivery.local:8090" },
+      { "name": "EUREKA_HOST", "value": "discovery-server.food-delivery.local" }
+    ],
+    "secrets": [
+      { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:JWT_SECRET::" },
+      { "name": "GOOGLE_AI_API_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:207206034400:secret:food-delivery/config:GOOGLE_AI_API_KEY::" }
+    ]
+  }
+}
