@@ -24,7 +24,7 @@ public class SecurityConfig {
     public JwtAuthenticationFilter jwtAuthenticationFilter(JwtUtils jwtUtils) {
         return new JwtAuthenticationFilter(
                 jwtUtils,
-                List.of("/auth/register", "/auth/login", "/auth/validate", "/actuator")
+                List.of("/auth/register/customer", "/auth/login", "/auth/validate", "/actuator")
         );
     }
 
@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/validate", "/actuator/**").permitAll()
+                        .requestMatchers("/auth/register/customer", "/auth/login", "/auth/validate", "/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

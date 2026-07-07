@@ -16,7 +16,7 @@ import de.ullmann.fooddelivery.authservice.config.SecurityConfig;
 import de.ullmann.fooddelivery.authservice.dto.AddressRequest;
 import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
-import de.ullmann.fooddelivery.authservice.dto.RegisterRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.service.AuthService;
@@ -49,11 +49,11 @@ class AuthControllerTest {
     private static final AddressRequest ADDRESS = new AddressRequest("Main St", "1", "Berlin", "10115", "Germany");
 
     @Test
-    void register_shouldReturn201WithAuthResponse() throws Exception {
-        RegisterRequest request = new RegisterRequest("John", "Doe", EMAIL, "secret123", "+49123", ADDRESS);
-        when(authService.register(any())).thenReturn(new AuthResponse("jwt-token", CUSTOMER_ID, EMAIL));
+    void registerCustomer_shouldReturn201WithAuthResponse() throws Exception {
+        RegisterCustomerRequest request = new RegisterCustomerRequest("John", "Doe", EMAIL, "secret123", "+49123", ADDRESS);
+        when(authService.registerCustomer(any())).thenReturn(new AuthResponse("jwt-token", CUSTOMER_ID, EMAIL));
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/auth/register/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())

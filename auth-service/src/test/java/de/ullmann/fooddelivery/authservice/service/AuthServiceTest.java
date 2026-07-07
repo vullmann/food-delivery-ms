@@ -32,7 +32,7 @@ import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateRequest;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
-import de.ullmann.fooddelivery.authservice.dto.RegisterRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
 import de.ullmann.fooddelivery.authservice.exception.CustomerServiceException;
@@ -87,16 +87,16 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_whenEmailAlreadyExists_shouldThrow() {
+    void registerCustomer_whenEmailAlreadyExists_shouldThrow() {
         when(credentialRepository.existsByEmail(EMAIL)).thenReturn(true);
-        RegisterRequest req = new RegisterRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
+        RegisterCustomerRequest req = new RegisterCustomerRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
 
-        assertThatThrownBy(() -> authService.register(req))
+        assertThatThrownBy(() -> authService.registerCustomer(req))
                 .isInstanceOf(EmailAlreadyRegisteredException.class);
     }
 
     @Test
-    void register_success_shouldReturnAuthResponse() {
+    void registerCustomer_success_shouldReturnAuthResponse() {
         when(credentialRepository.existsByEmail(EMAIL)).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(jwtService.generateToken(any(), anyString(), any())).thenReturn("jwt-token");
@@ -118,9 +118,9 @@ class AuthServiceTest {
         when(responseSpec.body(CustomerCreateResponse.class)).thenReturn(customerResponse);
 
         AuthService service = new AuthService(credentialRepository, jwtService, passwordEncoder, restClient);
-        RegisterRequest req = new RegisterRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
+        RegisterCustomerRequest req = new RegisterCustomerRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
 
-        AuthResponse response = service.register(req);
+        AuthResponse response = service.registerCustomer(req);
 
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.userId()).isEqualTo(USER_ID);
@@ -138,7 +138,7 @@ class AuthServiceTest {
 
     @Test
     void login_whenPasswordMismatch_shouldThrow() {
-        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed");
+        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed", "John", "Doe", "+49123");
         when(credentialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credential));
         when(passwordEncoder.matches("wrongpassword", "hashed")).thenReturn(false);
         LoginRequest req = new LoginRequest(EMAIL, "wrongpassword");
@@ -149,7 +149,7 @@ class AuthServiceTest {
 
     @Test
     void login_success_shouldReturnAuthResponse() {
-        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed");
+        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed", "John", "Doe", "+49123");
         when(credentialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credential));
         when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
         when(jwtService.generateToken(USER_ID, EMAIL, Role.CUSTOMER)).thenReturn("jwt-token");
@@ -193,17 +193,17 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_restClientException_shouldThrowCustomerServiceException() {
+    void registerCustomer_restClientException_shouldThrowCustomerServiceException() {
         // 1. Mock Server Expectations: Simulate a server crash on the endpoint
         server.expect(MockRestRequestMatchers.requestTo("/customers"))
                 .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
                 .andRespond(MockRestResponseCreators.withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
         // 2. Act & Assert: Verify your custom exception class is thrown
-        RegisterRequest req = new RegisterRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
+        RegisterCustomerRequest req = new RegisterCustomerRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
 
         CustomerServiceException exception = assertThrows(CustomerServiceException.class, () -> {
-            authService.register(req);
+            authService.registerCustomer(req);
         });
 
         // 3. Assert: Verify your custom error message format is preserved

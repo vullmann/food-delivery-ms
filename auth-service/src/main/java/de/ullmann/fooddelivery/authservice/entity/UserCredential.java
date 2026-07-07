@@ -35,6 +35,15 @@ public class UserCredential {
     @Column(nullable = false)
     private String hashedPassword;
 
+    @Column(nullable = false)
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
+
+    @Column(nullable = false)
+    private String phone;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -46,12 +55,18 @@ public class UserCredential {
     public static UserCredential createCustomer(
             UUID userId,
             String email,
-            String hashedPassword) {
+            String hashedPassword,
+            String firstName,
+            String lastName,
+            String phone) {
         var credential = new UserCredential();
         credential.id = UUID.randomUUID();
         credential.userId = userId;
         credential.email = email;
         credential.hashedPassword = hashedPassword;
+        credential.firstName = firstName;
+        credential.lastName = lastName;
+        credential.phone = phone;
         credential.role = Role.CUSTOMER;
         return credential;
     }
@@ -59,12 +74,18 @@ public class UserCredential {
     public static UserCredential create(
             String email,
             String hashedPassword,
+            String firstName,
+            String lastName,
+            String phone,
             Role role) {
         var credential = new UserCredential();
         credential.id = UUID.randomUUID();
         credential.userId = credential.id;
         credential.email = email;
         credential.hashedPassword = hashedPassword;
+        credential.firstName = firstName;
+        credential.lastName = lastName;
+        credential.phone = phone;
         credential.role = role;
         return credential;
     }

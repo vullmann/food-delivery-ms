@@ -13,7 +13,7 @@ import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateRequest;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
-import de.ullmann.fooddelivery.authservice.dto.RegisterRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
 import de.ullmann.fooddelivery.authservice.dto.StaffResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
@@ -47,7 +47,7 @@ public class AuthService {
         this.customerClient = customerClient;
     }
 
-    public AuthResponse register(RegisterRequest req) {
+    public AuthResponse registerCustomer(RegisterCustomerRequest req) {
         if (credentialRepository.existsByEmail(req.email())) {
             throw new EmailAlreadyRegisteredException(req.email());
         }
@@ -68,7 +68,8 @@ public class AuthService {
             throw new CustomerServiceException("Failed to create customer profile: " + e.getMessage());
         }
 
-        UserCredential credential = UserCredential.createCustomer(customer.id(), req.email(), hashed);
+        UserCredential credential = UserCredential.createCustomer(
+                customer.id(), req.email(), hashed, req.firstName(), req.lastName(), req.phone());
         credentialRepository.save(credential);
 
         return new AuthResponse(
@@ -103,10 +104,13 @@ public class AuthService {
         }
 
         String hashed = passwordEncoder.encode(req.password());
-        UserCredential credential = UserCredential.create(req.email(), hashed, req.role());
+        UserCredential credential = UserCredential.create(
+                req.email(), hashed, req.firstName(), req.lastName(), req.phone(), req.role());
         credentialRepository.save(credential);
 
-        return new StaffResponse(credential.getUserId(), credential.getEmail(), credential.getRole());
+        return new StaffResponse(
+                credential.getUserId(), credential.getFirstName(), credential.getLastName(),
+                credential.getEmail(), credential.getPhone(), credential.getRole());
     }
 
     private Role currentCallerRole() {

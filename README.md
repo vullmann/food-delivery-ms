@@ -86,15 +86,16 @@ docker compose up zookeeper kafka postgres-customer postgres-restaurant postgres
 ## API Overview
 
 All requests go through the gateway at `http://localhost:8088`.  
-Use `/auth/register` or `/auth/login` first to obtain a JWT, then include it as `Authorization: Bearer <token>`.
+Use `/auth/register/customer` or `/auth/login` first to obtain a JWT, then include it as `Authorization: Bearer <token>`.
 
 ### Auth
 
-| Method | Path           | Auth | Description        |
-|--------|----------------|------|--------------------|
-| POST   | /auth/register | No   | Register + get JWT |
-| POST   | /auth/login    | No   | Login + get JWT    |
-| POST   | /auth/validate | No   | Validate JWT       |
+| Method | Path                  | Auth        | Description                              |
+|--------|-----------------------|-------------|-------------------------------------------|
+| POST   | /auth/register/customer | No        | Register as customer + get JWT           |
+| POST   | /auth/register/staff  | Yes (admin) | Register staff (driver/restaurant/admin) |
+| POST   | /auth/login           | No          | Login + get JWT                          |
+| POST   | /auth/validate        | No          | Validate JWT                             |
 
 ### Customers
 
