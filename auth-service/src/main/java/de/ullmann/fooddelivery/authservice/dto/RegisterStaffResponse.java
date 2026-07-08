@@ -4,4 +4,4 @@ import java.util.UUID;
 
 import de.ullmann.fooddelivery.common.security.Role;
 
-public record StaffResponse(UUID userId, String firstName, String lastName, String email, String phone, Role role) {}
+public record RegisterStaffResponse(UUID userId, String firstName, String lastName, String email, String phone, Role role) {}

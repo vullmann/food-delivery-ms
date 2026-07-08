@@ -5,12 +5,12 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-class AuthResponseTest {
+class LoginResponseTest {
 
     @Test
     void constructor_shouldSetAllFields() {
         UUID userId = UUID.randomUUID();
-        AuthResponse response = new AuthResponse("jwt-token", userId, "user@example.com");
+        LoginResponse response = new LoginResponse("jwt-token", userId, "user@example.com");
 
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.userId()).isEqualTo(userId);

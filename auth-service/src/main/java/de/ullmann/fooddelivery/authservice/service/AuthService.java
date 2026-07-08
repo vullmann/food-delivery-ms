@@ -9,13 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateRequest;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
+import de.ullmann.fooddelivery.authservice.dto.LoginResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
-import de.ullmann.fooddelivery.authservice.dto.StaffResponse;
+import de.ullmann.fooddelivery.authservice.dto.RegisterStaffResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
 import de.ullmann.fooddelivery.authservice.exception.CustomerServiceException;
@@ -47,7 +48,7 @@ public class AuthService {
         this.customerClient = customerClient;
     }
 
-    public AuthResponse registerCustomer(RegisterCustomerRequest req) {
+    public RegisterCustomerResponse registerCustomer(RegisterCustomerRequest req) {
         if (credentialRepository.existsByEmail(req.email())) {
             throw new EmailAlreadyRegisteredException(req.email());
         }
@@ -72,15 +73,14 @@ public class AuthService {
                 customer.id(), req.email(), hashed, req.firstName(), req.lastName(), req.phone());
         credentialRepository.save(credential);
 
-        return new AuthResponse(
-                jwtService.generateToken(customer.id(), req.email(), credential.getRole()),
-                customer.id(),
-                req.email()
+        return new RegisterCustomerResponse(
+                credential.getUserId(), credential.getFirstName(), credential.getLastName(),
+                credential.getEmail(), credential.getPhone()
         );
     }
 
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest req) {
+    public LoginResponse login(LoginRequest req) {
         UserCredential credential = credentialRepository.findByEmail(req.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
@@ -88,14 +88,14 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
-        return new AuthResponse(
+        return new LoginResponse(
                 jwtService.generateToken(credential.getUserId(), credential.getEmail(), credential.getRole()),
                 credential.getUserId(),
                 credential.getEmail()
         );
     }
 
-    public StaffResponse registerStaff(RegisterStaffRequest req) {
+    public RegisterStaffResponse registerStaff(RegisterStaffRequest req) {
         Role callerRole = currentCallerRole();
         assertCanCreate(callerRole, req.role());
 
@@ -108,7 +108,7 @@ public class AuthService {
                 req.email(), hashed, req.firstName(), req.lastName(), req.phone(), req.role());
         credentialRepository.save(credential);
 
-        return new StaffResponse(
+        return new RegisterStaffResponse(
                 credential.getUserId(), credential.getFirstName(), credential.getLastName(),
                 credential.getEmail(), credential.getPhone(), credential.getRole());
     }

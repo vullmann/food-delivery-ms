@@ -28,11 +28,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import de.ullmann.fooddelivery.authservice.dto.AddressRequest;
-import de.ullmann.fooddelivery.authservice.dto.AuthResponse;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateRequest;
 import de.ullmann.fooddelivery.authservice.dto.CustomerCreateResponse;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
+import de.ullmann.fooddelivery.authservice.dto.LoginResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
+import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
 import de.ullmann.fooddelivery.authservice.exception.CustomerServiceException;
@@ -96,10 +97,9 @@ class AuthServiceTest {
     }
 
     @Test
-    void registerCustomer_success_shouldReturnAuthResponse() {
+    void registerCustomer_success_shouldReturnRegisterCustomerResponse() {
         when(credentialRepository.existsByEmail(EMAIL)).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(jwtService.generateToken(any(), anyString(), any())).thenReturn("jwt-token");
 
         // 1. create the chain mocks
         RestClient restClient = mock(RestClient.class);
@@ -120,9 +120,8 @@ class AuthServiceTest {
         AuthService service = new AuthService(credentialRepository, jwtService, passwordEncoder, restClient);
         RegisterCustomerRequest req = new RegisterCustomerRequest("John", "Doe", EMAIL, "secret", "+49123", ADDRESS);
 
-        AuthResponse response = service.registerCustomer(req);
+        RegisterCustomerResponse response = service.registerCustomer(req);
 
-        assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.userId()).isEqualTo(USER_ID);
         assertThat(response.email()).isEqualTo(EMAIL);
     }
@@ -148,14 +147,14 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_success_shouldReturnAuthResponse() {
+    void login_success_shouldReturnLoginResponse() {
         UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed", "John", "Doe", "+49123");
         when(credentialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credential));
         when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
         when(jwtService.generateToken(USER_ID, EMAIL, Role.CUSTOMER)).thenReturn("jwt-token");
         LoginRequest req = new LoginRequest(EMAIL, "secret");
 
-        AuthResponse response = authService.login(req);
+        LoginResponse response = authService.login(req);
 
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.userId()).isEqualTo(USER_ID);
