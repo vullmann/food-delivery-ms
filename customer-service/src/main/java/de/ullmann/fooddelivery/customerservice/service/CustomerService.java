@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import de.ullmann.fooddelivery.common.event.CustomerCreatedEvent;
 import de.ullmann.fooddelivery.common.event.CustomerProfileUpdatedEvent;
+import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
 import de.ullmann.fooddelivery.customerservice.dto.AddressRequest;
@@ -19,7 +20,9 @@ import de.ullmann.fooddelivery.customerservice.exception.CustomerNotFoundExcepti
 import de.ullmann.fooddelivery.customerservice.exception.EmailAlreadyInUseException;
 import de.ullmann.fooddelivery.customerservice.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -36,12 +39,26 @@ public class CustomerService {
         Address address = toAddress(req.address());
         Customer customer = Customer.create(
                 req.firstName(), req.lastName(),
-                req.email(), req.password(),
-                req.phone(), address
+                req.email(), req.phone(), address
         );
         customer = customerRepository.save(customer);
         publishCustomerCreated(customer);
         return customer;
+    }
+
+    // Consumes UserRegisteredEvent (role=CUSTOMER) so the customer profile shares
+    // its id with the auth-service userId; idempotent against redelivery.
+    public void registerFromEvent(UserRegisteredEvent event) {
+        if (customerRepository.existsById(event.userId())) {
+            log.info("Customer profile for userId={} already exists, skipping", event.userId());
+            return;
+        }
+        Customer customer = Customer.createWithId(
+                event.userId(), event.firstName(), event.lastName(),
+                event.email(), event.phone(), event.address()
+        );
+        customer = customerRepository.save(customer);
+        publishCustomerCreated(customer);
     }
 
     public Customer updateCustomer(

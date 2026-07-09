@@ -15,7 +15,6 @@ class CustomerResponseTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 address
         );
@@ -39,7 +38,6 @@ class CustomerResponseTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 null,
                 address
         );
@@ -57,7 +55,6 @@ class CustomerResponseTest {
                 "Jane",
                 "Smith",
                 "jane.smith@example.com",
-                "securepass",
                 "+4998765432",
                 address
         );

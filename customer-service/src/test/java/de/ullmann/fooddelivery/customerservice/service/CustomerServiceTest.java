@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
 import de.ullmann.fooddelivery.customerservice.dto.AddressRequest;
@@ -36,7 +38,6 @@ class CustomerServiceTest {
 
     private static final String JOHN = "John";
     private static final String MAIL = "john.doe@example.com";
-    private static final String PASSWORD_123 = "password123";
     private static final String DOE = "Doe";
     private static final String PHONE = "+49123456789";
 
@@ -60,7 +61,6 @@ class CustomerServiceTest {
                 JOHN,
                 DOE,
                 MAIL,
-                PASSWORD_123,
                 PHONE,
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -78,7 +78,6 @@ class CustomerServiceTest {
         assertEquals(JOHN, result.getFirstName());
         assertEquals(DOE, result.getLastName());
         assertEquals(MAIL, result.getEmail());
-        assertEquals(PASSWORD_123, result.getPassword());
         assertEquals(PHONE, result.getPhone());
         assertNotNull(result.getAddress());
 
@@ -90,7 +89,7 @@ class CustomerServiceTest {
 
     @Test
     void createCustomer_shouldThrowWhenEmailAlreadyInUse() {
-        Customer existing = Customer.create(JOHN, DOE, MAIL, PASSWORD_123, PHONE,
+        Customer existing = Customer.create(JOHN, DOE, MAIL, PHONE,
                 Address.of("Main St", "123", "Berlin", "10115", "Germany"));
         when(customerRepository.findByEmail(MAIL)).thenReturn(Optional.of(existing));
 
@@ -117,13 +116,45 @@ class CustomerServiceTest {
     }
 
     @Test
+    void registerFromEvent_shouldCreateCustomerWithEventUserId() {
+        UUID userId = UUID.randomUUID();
+        Address address = Address.of("Main St", "123", "Berlin", "10115", "Germany");
+        UserRegisteredEvent event = new UserRegisteredEvent(
+                userId, "CUSTOMER", JOHN, DOE, MAIL, PHONE, address, LocalDateTime.now());
+
+        when(customerRepository.existsById(userId)).thenReturn(false);
+        when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        customerService.registerFromEvent(event);
+
+        verify(customerRepository).save(customerCaptor.capture());
+        Customer saved = customerCaptor.getValue();
+        assertEquals(userId, saved.getId());
+        assertEquals(JOHN, saved.getFirstName());
+        assertEquals(MAIL, saved.getEmail());
+    }
+
+    @Test
+    void registerFromEvent_shouldSkipWhenCustomerAlreadyExists() {
+        UUID userId = UUID.randomUUID();
+        UserRegisteredEvent event = new UserRegisteredEvent(
+                userId, "CUSTOMER", JOHN, DOE, MAIL, PHONE,
+                Address.of("Main St", "123", "Berlin", "10115", "Germany"), LocalDateTime.now());
+
+        when(customerRepository.existsById(userId)).thenReturn(true);
+
+        customerService.registerFromEvent(event);
+
+        verify(customerRepository, never()).save(any());
+    }
+
+    @Test
     void updateCustomer_shouldUpdateCustomerFields() {
         UUID customerId = UUID.randomUUID();
         Customer existingCustomer = Customer.create(
                 JOHN,
                 DOE,
                 MAIL,
-                PASSWORD_123,
                 PHONE,
                 Address.of("Old St", "1", "Berlin", "10115", "Germany")
         );
@@ -148,7 +179,6 @@ class CustomerServiceTest {
         assertEquals("80331", result.getAddress().getZip());
         assertEquals("Germany", result.getAddress().getCountry());
         assertEquals(MAIL, result.getEmail());
-        assertEquals(PASSWORD_123, result.getPassword());
 
         verify(customerRepository, times(1)).findById(customerId);
     }
@@ -178,7 +208,6 @@ class CustomerServiceTest {
                 JOHN,
                 DOE,
                 MAIL,
-                PASSWORD_123,
                 PHONE,
                 Address.of("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -211,7 +240,6 @@ class CustomerServiceTest {
                 JOHN,
                 DOE,
                 MAIL,
-                PASSWORD_123,
                 PHONE,
                 Address.of("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -246,7 +274,6 @@ class CustomerServiceTest {
                 JOHN,
                 DOE,
                 email,
-                PASSWORD_123,
                 PHONE,
                 Address.of("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -276,9 +303,9 @@ class CustomerServiceTest {
 
     @Test
     void findAllCustomers_shouldReturnAllCustomers() {
-        Customer c1 = Customer.create(JOHN, DOE, MAIL, PASSWORD_123, PHONE,
+        Customer c1 = Customer.create(JOHN, DOE, MAIL, PHONE,
                 Address.of("Main St", "123", "Berlin", "10115", "Germany"));
-        Customer c2 = Customer.create("Jane", "Smith", "jane@example.com", "pass456", "+49987654321",
+        Customer c2 = Customer.create("Jane", "Smith", "jane@example.com", "+49987654321",
                 Address.of("Oak Ave", "456", "Munich", "80331", "Germany"));
 
         when(customerRepository.findAll()).thenReturn(List.of(c1, c2));

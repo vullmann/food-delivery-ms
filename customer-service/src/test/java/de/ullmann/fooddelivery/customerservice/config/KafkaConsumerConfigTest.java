@@ -1,4 +1,4 @@
-package de.ullmann.fooddelivery.deliverservice.config;
+package de.ullmann.fooddelivery.customerservice.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,18 +16,6 @@ class KafkaConsumerConfigTest {
     void setUp() {
         config = new KafkaConsumerConfig();
         ReflectionTestUtils.setField(config, "bootstrapServers", "localhost:9092");
-    }
-
-    @Test
-    void orderReadyConsumerFactory_shouldReturnFactory() {
-        ConsumerFactory<?, ?> factory = config.orderReadyConsumerFactory();
-        assertThat(factory).isNotNull();
-    }
-
-    @Test
-    void orderReadyFactory_shouldReturnFactory() {
-        ConcurrentKafkaListenerContainerFactory<?, ?> factory = config.orderReadyFactory();
-        assertThat(factory).isNotNull();
     }
 
     @Test

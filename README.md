@@ -97,6 +97,10 @@ Use `/auth/register/customer` to register, then `/auth/login` to obtain a JWT, a
 | POST   | /auth/login           | No          | Login + get JWT                          |
 | POST   | /auth/validate        | No          | Validate JWT                             |
 
+> **Planned refactor:** `/auth/login` currently issues a single long-lived JWT (24h) with no logout endpoint.
+> This will change to short-lived access tokens + refresh tokens (with a `/auth/logout` endpoint to revoke
+> the refresh token).
+
 ### Customers
 
 | Method | Path                  | Auth | Description             |
@@ -162,6 +166,18 @@ Log in with a seed account (`anna.mueller@example.com` / `password123`) to start
 
 `api-tester.html` in the project root is a browser-based UI covering all services.  
 Open it locally, log in via the Auth tab to get a JWT, then explore every endpoint without Postman.
+
+## Postman Collection
+
+`FoodDeliveryService.postman_collection.json` in the project root has an `AuthService` folder with subfolders:
+
+- **Superadmin** — login, creates one staff account per role (`restaurant_admin`, `restaurant_employee`,
+  `delivery_admin`, `delivery_driver`), logout (client-side), then a post-logout validate check (expect 400)
+- **Restaurant Admin** / **Restaurant Employee** / **Delivery Admin** / **Delivery Driver** — login + logout
+  (client-side) for the account created above
+
+Import it into Postman, set `superadminPassword` (and `baseUrl` if not using the gateway), then run the
+**Superadmin** folder first (it creates the other accounts), followed by the four role folders in any order.
 
 ## Seed Data
 

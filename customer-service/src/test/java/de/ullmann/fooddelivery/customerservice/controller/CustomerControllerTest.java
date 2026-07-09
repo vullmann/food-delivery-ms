@@ -56,7 +56,7 @@ class CustomerControllerTest {
     void createCustomer_shouldReturnCreatedCustomer() throws Exception {
         CreateCustomerRequest request = buildCreateRequest("John", "Doe");
         Customer customer = Customer.create("John", "Doe", "john.doe@example.com",
-                "password123", "+49123456789", berlinAddress());
+                "+49123456789", berlinAddress());
 
         when(customerService.createCustomer(any())).thenReturn(customer);
 
@@ -86,7 +86,7 @@ class CustomerControllerTest {
     void getCustomer_shouldReturnCustomer() throws Exception {
         UUID id = UUID.randomUUID();
         Customer customer = Customer.create("John", "Doe", "john.doe@example.com",
-                "password123", "+49123456789", berlinAddress());
+                "+49123456789", berlinAddress());
 
         when(customerService.findCustomer(id)).thenReturn(customer);
 
@@ -114,7 +114,7 @@ class CustomerControllerTest {
     void findByEmail_shouldReturnCustomer() throws Exception {
         String email = "john.doe@example.com";
         Customer customer = Customer.create("John", "Doe", email,
-                "password123", "+49123456789", berlinAddress());
+                "+49123456789", berlinAddress());
 
         when(customerService.findCustomerByEmail(email)).thenReturn(customer);
 
@@ -139,9 +139,9 @@ class CustomerControllerTest {
     @Test
     void findAllCustomers_shouldReturnListOfCustomers() throws Exception {
         Customer c1 = Customer.create("John", "Doe", "john.doe@example.com",
-                "password123", "+49123456789", berlinAddress());
+                "+49123456789", berlinAddress());
         Customer c2 = Customer.create("Jane", "Smith", "jane.smith@example.com",
-                "password456", "+49987654321", munichAddress());
+                "+49987654321", munichAddress());
 
         when(customerService.findAllCustomers()).thenReturn(List.of(c1, c2));
 
@@ -159,7 +159,7 @@ class CustomerControllerTest {
         UUID id = UUID.randomUUID();
         UpdateCustomerRequest request = buildUpdateRequest("Jane", "Smith");
         Customer customer = Customer.create("Jane", "Smith", "john.doe@example.com",
-                "password123", "+49987654321", munichAddress());
+                "+49987654321", munichAddress());
 
         when(customerService.updateCustomer(eq(id), any())).thenReturn(customer);
 
@@ -222,7 +222,7 @@ class CustomerControllerTest {
 
     private CreateCustomerRequest buildCreateRequest(String firstName, String lastName) {
         return new CreateCustomerRequest(firstName, lastName,
-                "john.doe@example.com", "password123", "+49123456789",
+                "john.doe@example.com", "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany"));
     }
 

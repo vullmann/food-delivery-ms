@@ -34,9 +34,6 @@ public class Customer {
     private String email;
 
     @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false)
     private String phone;
 
     @Embedded
@@ -50,16 +47,24 @@ public class Customer {
             String firstName,
             String lastName,
             String email,
-            String password,
+            String phone,
+            Address address) {
+        return createWithId(UUID.randomUUID(), firstName, lastName, email, phone, address);
+    }
+
+    public static Customer createWithId(
+            UUID id,
+            String firstName,
+            String lastName,
+            String email,
             String phone,
             Address address) {
         var customer = new Customer();
-        customer.id = UUID.randomUUID();
+        customer.id = id;
         customer.createdAt = LocalDateTime.now();
         customer.firstName = firstName;
         customer.lastName = lastName;
         customer.email = email;
-        customer.password = password;
         customer.phone = phone;
         customer.address = address;
         return customer;

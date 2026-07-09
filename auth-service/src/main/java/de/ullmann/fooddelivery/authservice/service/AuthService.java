@@ -1,16 +1,14 @@
 package de.ullmann.fooddelivery.authservice.service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
-import de.ullmann.fooddelivery.authservice.dto.CustomerCreateRequest;
-import de.ullmann.fooddelivery.authservice.dto.CustomerCreateResponse;
+import de.ullmann.fooddelivery.authservice.dto.AddressRequest;
 import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
 import de.ullmann.fooddelivery.authservice.dto.LoginResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
@@ -19,12 +17,14 @@ import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
-import de.ullmann.fooddelivery.authservice.exception.CustomerServiceException;
 import de.ullmann.fooddelivery.authservice.exception.EmailAlreadyRegisteredException;
 import de.ullmann.fooddelivery.authservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.authservice.exception.InvalidCredentialsException;
 import de.ullmann.fooddelivery.authservice.exception.InvalidTokenException;
 import de.ullmann.fooddelivery.authservice.repository.UserCredentialRepository;
+import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
+import de.ullmann.fooddelivery.common.model.Address;
+import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
 import de.ullmann.fooddelivery.common.security.Role;
 import io.jsonwebtoken.JwtException;
 
@@ -32,20 +32,22 @@ import io.jsonwebtoken.JwtException;
 @Transactional
 public class AuthService {
 
+    private static final String AGGREGATE_TYPE = "UserCredential";
+
     private final UserCredentialRepository credentialRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final RestClient customerClient;
+    private final OutboxEventService outboxEventService;
 
     public AuthService(
             UserCredentialRepository credentialRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            RestClient customerClient) {
+            OutboxEventService outboxEventService) {
         this.credentialRepository = credentialRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.customerClient = customerClient;
+        this.outboxEventService = outboxEventService;
     }
 
     public RegisterCustomerResponse registerCustomer(RegisterCustomerRequest req) {
@@ -54,24 +56,13 @@ public class AuthService {
         }
 
         String hashed = passwordEncoder.encode(req.password());
-
-        CustomerCreateResponse customer;
-        try {
-            customer = customerClient.post()
-                    .uri("/customers")
-                    .body(new CustomerCreateRequest(
-                            req.firstName(), req.lastName(), req.email(),
-                            hashed, req.phone(), req.address()
-                    ))
-                    .retrieve()
-                    .body(CustomerCreateResponse.class);
-        } catch (RestClientException e) {
-            throw new CustomerServiceException("Failed to create customer profile: " + e.getMessage());
-        }
+        UUID userId = UUID.randomUUID();
 
         UserCredential credential = UserCredential.createCustomer(
-                customer.id(), req.email(), hashed, req.firstName(), req.lastName(), req.phone());
+                userId, req.email(), hashed, req.firstName(), req.lastName(), req.phone());
         credentialRepository.save(credential);
+
+        publishUserRegistered(credential, toAddress(req.address()));
 
         return new RegisterCustomerResponse(
                 credential.getUserId(), credential.getFirstName(), credential.getLastName(),
@@ -108,9 +99,33 @@ public class AuthService {
                 req.email(), hashed, req.firstName(), req.lastName(), req.phone(), req.role());
         credentialRepository.save(credential);
 
+        publishUserRegistered(credential, null);
+
         return new RegisterStaffResponse(
                 credential.getUserId(), credential.getFirstName(), credential.getLastName(),
                 credential.getEmail(), credential.getPhone(), credential.getRole());
+    }
+
+    private void publishUserRegistered(UserCredential credential, Address address) {
+        outboxEventService.createEvent(
+                AGGREGATE_TYPE,
+                credential.getUserId(),
+                UserRegisteredEvent.TOPIC,
+                new UserRegisteredEvent(
+                        credential.getUserId(),
+                        credential.getRole().name(),
+                        credential.getFirstName(),
+                        credential.getLastName(),
+                        credential.getEmail(),
+                        credential.getPhone(),
+                        address,
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    private Address toAddress(AddressRequest r) {
+        return Address.of(r.street(), r.houseNumber(), r.city(), r.zip(), r.country());
     }
 
     private Role currentCallerRole() {

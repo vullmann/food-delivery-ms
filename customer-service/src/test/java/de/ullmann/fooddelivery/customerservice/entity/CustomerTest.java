@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 import de.ullmann.fooddelivery.common.model.Address;
@@ -18,7 +20,6 @@ class CustomerTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 address
         );
@@ -27,7 +28,6 @@ class CustomerTest {
         assertEquals("John", customer.getFirstName());
         assertEquals("Doe", customer.getLastName());
         assertEquals("john.doe@example.com", customer.getEmail());
-        assertEquals("password123", customer.getPassword());
         assertEquals("+49123456789", customer.getPhone());
         assertEquals(address, customer.getAddress());
         assertNotNull(customer.getId());
@@ -42,7 +42,6 @@ class CustomerTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 null,
                 address
         );
@@ -52,13 +51,23 @@ class CustomerTest {
     }
 
     @Test
+    void createWithId_shouldUseGivenId() {
+        Address address = Address.of("Main St", "123", "Berlin", "10115", "Germany");
+        UUID id = UUID.randomUUID();
+
+        Customer customer = Customer.createWithId(
+                id, "John", "Doe", "john.doe@example.com", "+49123456789", address);
+
+        assertEquals(id, customer.getId());
+    }
+
+    @Test
     void update_shouldUpdateCustomerFields() {
         Address oldAddress = Address.of("Old St", "1", "Berlin", "10115", "Germany");
         Customer customer = Customer.create(
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 oldAddress
         );
@@ -71,7 +80,6 @@ class CustomerTest {
         assertEquals("+49987654321", customer.getPhone());
         assertEquals(newAddress, customer.getAddress());
         assertEquals("john.doe@example.com", customer.getEmail());
-        assertEquals("password123", customer.getPassword());
     }
 
 
@@ -82,7 +90,6 @@ class CustomerTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 oldAddress
         );

@@ -40,8 +40,8 @@ public class Driver {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    private Driver(String firstName, String lastName, String phone) {
-        this.id = UUID.randomUUID();
+    private Driver(UUID id, String firstName, String lastName, String phone) {
+        this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;
@@ -49,7 +49,11 @@ public class Driver {
     }
 
     public static Driver create(String firstName, String lastName, String phone) {
-        return new Driver(firstName, lastName, phone);
+        return new Driver(UUID.randomUUID(), firstName, lastName, phone);
+    }
+
+    public static Driver createWithId(UUID id, String firstName, String lastName, String phone) {
+        return new Driver(id, firstName, lastName, phone);
     }
 
     public void markBusy() {

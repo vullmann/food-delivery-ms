@@ -36,6 +36,8 @@ spring:
         static: ${AWS_REGION:eu-central-1}
       sns:
         enabled: false
+      sqs:
+        enabled: false
 
 management:
   endpoints:

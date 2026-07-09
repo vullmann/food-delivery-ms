@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // called internally by auth-service during registration, before the new user has a token
+                        // manual/admin customer creation without going through auth-service's registration event flow
                         .requestMatchers(HttpMethod.POST, "/customers").permitAll()
                         .anyRequest().authenticated()
                 )

@@ -36,12 +36,6 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleCustomerService_shouldReturn502() {
-        ProblemDetail pd = handler.handleCustomerService(new CustomerServiceException("downstream error"));
-        assertThat(pd.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY.value());
-    }
-
-    @Test
     void handleValidation_shouldReturn400() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);

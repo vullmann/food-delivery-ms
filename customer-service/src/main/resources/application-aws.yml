@@ -3,5 +3,7 @@
     aws:
       sns:
         enabled: true
+      sqs:
+        enabled: true
       region:
         static: ${AWS_REGION:eu-central-1}

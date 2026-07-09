@@ -2,9 +2,21 @@ package de.ullmann.fooddelivery.deliverservice.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 class DriverTest {
+
+    @Test
+    void createWithId_shouldUseGivenId() {
+        UUID id = UUID.randomUUID();
+
+        Driver driver = Driver.createWithId(id, "Alice", "Smith", "+49123456789");
+
+        assertThat(driver.getId()).isEqualTo(id);
+        assertThat(driver.getStatus()).isEqualTo(DriverStatus.AVAILABLE);
+    }
 
     @Test
     void create_shouldSetDefaultStatusToAvailable() {

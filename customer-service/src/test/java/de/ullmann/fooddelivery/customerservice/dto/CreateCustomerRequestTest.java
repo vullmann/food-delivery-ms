@@ -28,7 +28,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -43,7 +42,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 null,
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -60,7 +58,6 @@ class CreateCustomerRequestTest {
                 "",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -76,7 +73,6 @@ class CreateCustomerRequestTest {
                 null,
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -92,7 +88,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -108,7 +103,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "Doe",
                 "",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -124,7 +118,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "Doe",
                 "invalid-email",
-                "password123",
                 "+49123456789",
                 new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
         );
@@ -135,44 +128,11 @@ class CreateCustomerRequestTest {
     }
 
     @Test
-    void validation_shouldFailWhenPasswordIsBlank() {
-        CreateCustomerRequest request = new CreateCustomerRequest(
-                "John",
-                "Doe",
-                "john.doe@example.com",
-                "",
-                "+49123456789",
-                new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
-        );
-
-        Set<ConstraintViolation<CreateCustomerRequest>> violations = validator.validate(request);
-        assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("password")));
-    }
-
-    @Test
-    void validation_shouldFailWhenPasswordIsNull() {
-        CreateCustomerRequest request = new CreateCustomerRequest(
-                "John",
-                "Doe",
-                "john.doe@example.com",
-                null,
-                "+49123456789",
-                new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
-        );
-
-        Set<ConstraintViolation<CreateCustomerRequest>> violations = validator.validate(request);
-        assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("password")));
-    }
-
-    @Test
     void validation_shouldFailWhenAddressIsNull() {
         CreateCustomerRequest request = new CreateCustomerRequest(
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 null
         );
@@ -188,7 +148,6 @@ class CreateCustomerRequestTest {
                 "John",
                 "Doe",
                 "john.doe@example.com",
-                "password123",
                 "+49123456789",
                 new AddressRequest("", "123", "Berlin", "10115", "Germany")
         );

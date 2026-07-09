@@ -18,6 +18,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+
+import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.deliverservice.dto.CreateDriverRequest;
 import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
@@ -55,6 +58,40 @@ class DriverServiceTest {
         assertThat(captor.getValue().getFirstName()).isEqualTo("Max");
         assertThat(captor.getValue().getLastName()).isEqualTo("Müller");
         assertThat(response.status()).isEqualTo(DriverStatus.AVAILABLE);
+    }
+
+    // ── registerFromEvent ─────────────────────────────────────────────────────
+
+    @Test
+    void registerFromEvent_shouldCreateDriverWithEventUserId() {
+        UUID userId = UUID.randomUUID();
+        UserRegisteredEvent event = new UserRegisteredEvent(
+                userId, "DELIVERY_DRIVER", "Max", "Müller", "max@example.com",
+                "+49 30 11111111", null, LocalDateTime.now());
+
+        when(driverRepository.existsById(userId)).thenReturn(false);
+        when(driverRepository.save(any(Driver.class))).thenAnswer(i -> i.getArgument(0));
+
+        driverService.registerFromEvent(event);
+
+        ArgumentCaptor<Driver> captor = ArgumentCaptor.forClass(Driver.class);
+        verify(driverRepository).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(userId);
+        assertThat(captor.getValue().getFirstName()).isEqualTo("Max");
+    }
+
+    @Test
+    void registerFromEvent_shouldSkipWhenDriverAlreadyExists() {
+        UUID userId = UUID.randomUUID();
+        UserRegisteredEvent event = new UserRegisteredEvent(
+                userId, "DELIVERY_DRIVER", "Max", "Müller", "max@example.com",
+                "+49 30 11111111", null, LocalDateTime.now());
+
+        when(driverRepository.existsById(userId)).thenReturn(true);
+
+        driverService.registerFromEvent(event);
+
+        verify(driverRepository, org.mockito.Mockito.never()).save(any());
     }
 
     // ── findById ──────────────────────────────────────────────────────────────
