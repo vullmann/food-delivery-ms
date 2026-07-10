@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,9 @@ import de.ullmann.fooddelivery.deliverservice.exception.DeliveryOrderNotFoundExc
 import de.ullmann.fooddelivery.deliverservice.exception.GlobalExceptionHandler;
 import de.ullmann.fooddelivery.deliverservice.service.DeliveryService;
 
+// addFilters=false: this slice doesn't load the app's SecurityConfig, so without this the default
+// Spring Security auto-configuration would require authentication on every request.
+@AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(controllers = {DeliveryController.class, GlobalExceptionHandler.class})
 class DeliveryControllerTest {
 

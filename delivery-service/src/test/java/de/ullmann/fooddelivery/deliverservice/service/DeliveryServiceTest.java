@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
 
 import de.ullmann.fooddelivery.common.event.DeliveryCancelledEvent;
 import de.ullmann.fooddelivery.common.event.DriverAssignedEvent;
@@ -32,6 +38,7 @@ import de.ullmann.fooddelivery.deliverservice.entity.DeliveryOrder;
 import de.ullmann.fooddelivery.deliverservice.entity.DeliveryStatus;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
+import de.ullmann.fooddelivery.deliverservice.exception.DeliveryOrderAccessDeniedException;
 import de.ullmann.fooddelivery.deliverservice.exception.DeliveryOrderNotFoundException;
 import de.ullmann.fooddelivery.deliverservice.repository.DeliveryOrderRepository;
 import de.ullmann.fooddelivery.deliverservice.repository.DriverRepository;
@@ -66,6 +73,16 @@ class DeliveryServiceTest {
         pickupAddress = Address.of("Restaurant St", "5", "Berlin", "10119", "Germany");
         deliveryAddress = Address.of("Main St", "1", "Berlin", "10115", "Germany");
         readyEvent = new OrderReadyForDeliveryEvent(orderId, customerId, restaurantId, pickupAddress, deliveryAddress, LocalDateTime.now());
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAsDeliveryDriver(UUID driverId) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                driverId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_DELIVERY_DRIVER"))));
     }
 
     // ── receiveOrder ──────────────────────────────────────────────────────────
@@ -219,5 +236,77 @@ class DeliveryServiceTest {
 
         assertThatThrownBy(() -> deliveryService.findByOrderId(orderId))
                 .isInstanceOf(DeliveryOrderNotFoundException.class);
+    }
+
+    // ── DELIVERY_DRIVER may only access its own delivery ────────────────────────
+
+    @Test
+    void findById_shouldReturnResponse_whenCallerIsTheAssignedDriver() {
+        UUID driverId = UUID.randomUUID();
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(driverId);
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(driverId);
+
+        DeliveryOrderResponse response = deliveryService.findById(delivery.getId());
+
+        assertThat(response.driverId()).isEqualTo(driverId);
+    }
+
+    @Test
+    void findById_shouldThrow_whenCallerIsADifferentDriver() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(UUID.randomUUID());
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(UUID.randomUUID());
+
+        assertThatThrownBy(() -> deliveryService.findById(delivery.getId()))
+                .isInstanceOf(DeliveryOrderAccessDeniedException.class);
+    }
+
+    @Test
+    void findById_shouldThrow_whenCallerIsDriverButDeliveryHasNoDriverAssigned() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(UUID.randomUUID());
+
+        assertThatThrownBy(() -> deliveryService.findById(delivery.getId()))
+                .isInstanceOf(DeliveryOrderAccessDeniedException.class);
+    }
+
+    @Test
+    void findByOrderId_shouldThrow_whenCallerIsADifferentDriver() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(UUID.randomUUID());
+        when(deliveryOrderRepository.findByOrderId(orderId)).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(UUID.randomUUID());
+
+        assertThatThrownBy(() -> deliveryService.findByOrderId(orderId))
+                .isInstanceOf(DeliveryOrderAccessDeniedException.class);
+    }
+
+    @Test
+    void updateStatus_shouldSucceed_whenCallerIsTheAssignedDriver() {
+        UUID driverId = UUID.randomUUID();
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(driverId);
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(driverId);
+
+        deliveryService.updateStatus(delivery.getId(), DeliveryStatus.PICKED_UP);
+
+        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.PICKED_UP);
+    }
+
+    @Test
+    void updateStatus_shouldThrow_whenCallerIsADifferentDriver() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(UUID.randomUUID());
+        when(deliveryOrderRepository.findById(delivery.getId())).thenReturn(Optional.of(delivery));
+        authenticateAsDeliveryDriver(UUID.randomUUID());
+
+        assertThatThrownBy(() -> deliveryService.updateStatus(delivery.getId(), DeliveryStatus.PICKED_UP))
+                .isInstanceOf(DeliveryOrderAccessDeniedException.class);
+        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.DRIVER_ASSIGNED);
     }
 }

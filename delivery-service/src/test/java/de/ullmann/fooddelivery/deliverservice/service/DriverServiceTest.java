@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +30,7 @@ import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
 import de.ullmann.fooddelivery.deliverservice.exception.DriverNotFoundException;
+import de.ullmann.fooddelivery.deliverservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.deliverservice.repository.DriverRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +47,16 @@ class DriverServiceTest {
     @BeforeEach
     void setUp() {
         driver = Driver.create("Max", "Müller", "+49 30 11111111");
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAsDeliveryDriver() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_DELIVERY_DRIVER"))));
     }
 
     // ── create ────────────────────────────────────────────────────────────────
@@ -206,5 +221,48 @@ class DriverServiceTest {
         assertThatThrownBy(() -> driverService.delete(unknownId))
                 .isInstanceOf(DriverNotFoundException.class)
                 .hasMessageContaining(unknownId.toString());
+    }
+
+    // ── DELIVERY_DRIVER may not manage the driver roster ────────────────────────
+
+    @Test
+    void create_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAsDeliveryDriver();
+
+        assertThatThrownBy(() -> driverService.create(
+                new CreateDriverRequest("Max", "Müller", "+49 30 11111111")))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void findById_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAsDeliveryDriver();
+
+        assertThatThrownBy(() -> driverService.findById(driver.getId()))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void findAll_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAsDeliveryDriver();
+
+        assertThatThrownBy(() -> driverService.findAll(null))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void updateStatus_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAsDeliveryDriver();
+
+        assertThatThrownBy(() -> driverService.updateStatus(driver.getId(), DriverStatus.OFFLINE))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void delete_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAsDeliveryDriver();
+
+        assertThatThrownBy(() -> driverService.delete(driver.getId()))
+                .isInstanceOf(InsufficientRoleException.class);
     }
 }

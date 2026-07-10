@@ -26,6 +26,20 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
+    @ExceptionHandler(InsufficientRoleException.class)
+    public ProblemDetail handleInsufficientRole(InsufficientRoleException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Insufficient Role");
+        return pd;
+    }
+
+    @ExceptionHandler(DeliveryOrderAccessDeniedException.class)
+    public ProblemDetail handleDeliveryOrderAccessDenied(DeliveryOrderAccessDeniedException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Delivery Order Access Denied");
+        return pd;
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
         String detail = ex.getBindingResult().getFieldErrors().stream()

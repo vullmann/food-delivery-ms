@@ -3,6 +3,8 @@ package de.ullmann.fooddelivery.deliverservice.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,11 +14,13 @@ import de.ullmann.fooddelivery.common.event.OrderDeliveredEvent;
 import de.ullmann.fooddelivery.common.event.OrderOnTheWayEvent;
 import de.ullmann.fooddelivery.common.event.OrderReadyForDeliveryEvent;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
+import de.ullmann.fooddelivery.common.security.Role;
 import de.ullmann.fooddelivery.deliverservice.dto.DeliveryOrderResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.DeliveryOrder;
 import de.ullmann.fooddelivery.deliverservice.entity.DeliveryStatus;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
+import de.ullmann.fooddelivery.deliverservice.exception.DeliveryOrderAccessDeniedException;
 import de.ullmann.fooddelivery.deliverservice.exception.DeliveryOrderNotFoundException;
 import de.ullmann.fooddelivery.deliverservice.repository.DeliveryOrderRepository;
 import de.ullmann.fooddelivery.deliverservice.repository.DriverRepository;
@@ -28,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class DeliveryService {
 
     private static final String AGGREGATE_TYPE = "DeliveryOrder";
+    private static final String DRIVER_ROLE_AUTHORITY = "ROLE_" + Role.DELIVERY_DRIVER;
 
     private final DeliveryOrderRepository deliveryOrderRepository;
     private final DriverRepository driverRepository;
@@ -55,6 +60,7 @@ public class DeliveryService {
     public void updateStatus(UUID deliveryId, DeliveryStatus newStatus) {
         DeliveryOrder delivery = deliveryOrderRepository.findById(deliveryId)
                 .orElseThrow(() -> new DeliveryOrderNotFoundException(deliveryId));
+        assertDriverOwnsDelivery(delivery);
 
         delivery.transitionTo(newStatus);
 
@@ -90,21 +96,41 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryOrderResponse findById(UUID deliveryId) {
-        return deliveryOrderRepository.findById(deliveryId)
-                .map(DeliveryOrderResponse::from)
+        DeliveryOrder delivery = deliveryOrderRepository.findById(deliveryId)
                 .orElseThrow(() -> new DeliveryOrderNotFoundException(deliveryId));
+        assertDriverOwnsDelivery(delivery);
+        return DeliveryOrderResponse.from(delivery);
     }
 
     @Transactional(readOnly = true)
     public DeliveryOrderResponse findByOrderId(UUID orderId) {
-        return deliveryOrderRepository.findByOrderId(orderId)
-                .map(DeliveryOrderResponse::from)
+        DeliveryOrder delivery = deliveryOrderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new DeliveryOrderNotFoundException(orderId));
+        assertDriverOwnsDelivery(delivery);
+        return DeliveryOrderResponse.from(delivery);
     }
 
     private void freeDriver(UUID driverId) {
         if (driverId != null) {
             driverRepository.findById(driverId).ifPresent(Driver::markAvailable);
+        }
+    }
+
+    // A DELIVERY_DRIVER caller may only access a delivery order assigned to itself.
+    // No authentication in context (e.g. plain unit tests, internal callers) is treated as not a driver.
+    private void assertDriverOwnsDelivery(DeliveryOrder delivery) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return;
+        }
+        boolean isDeliveryDriver = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(DRIVER_ROLE_AUTHORITY));
+        if (!isDeliveryDriver) {
+            return;
+        }
+        UUID callerId = UUID.fromString((String) authentication.getPrincipal());
+        if (!callerId.equals(delivery.getDriverId())) {
+            throw new DeliveryOrderAccessDeniedException(delivery.getId());
         }
     }
 }

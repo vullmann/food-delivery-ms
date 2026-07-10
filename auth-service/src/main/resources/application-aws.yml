@@ -1,0 +1,7 @@
+spring:
+  cloud:
+    aws:
+      sns:
+        enabled: true
+      region:
+        static: ${AWS_REGION:eu-central-1}

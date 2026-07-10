@@ -36,6 +36,23 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleInsufficientRole_shouldReturn403() {
+        ProblemDetail pd = handler.handleInsufficientRole(new InsufficientRoleException("not allowed"));
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(pd.getTitle()).isEqualTo("Insufficient Role");
+        assertThat(pd.getDetail()).isEqualTo("not allowed");
+    }
+
+    @Test
+    void handleDeliveryOrderAccessDenied_shouldReturn403() {
+        UUID id = UUID.randomUUID();
+        ProblemDetail pd = handler.handleDeliveryOrderAccessDenied(new DeliveryOrderAccessDeniedException(id));
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(pd.getTitle()).isEqualTo("Delivery Order Access Denied");
+        assertThat(pd.getDetail()).contains(id.toString());
+    }
+
+    @Test
     void handleValidation_shouldReturn400() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
