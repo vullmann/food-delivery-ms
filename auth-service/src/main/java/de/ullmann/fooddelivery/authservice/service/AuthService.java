@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.authservice.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +16,7 @@ import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffResponse;
+import de.ullmann.fooddelivery.authservice.dto.UserCredentialResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
 import de.ullmann.fooddelivery.authservice.exception.EmailAlreadyRegisteredException;
@@ -104,6 +106,20 @@ public class AuthService {
         return new RegisterStaffResponse(
                 credential.getUserId(), credential.getFirstName(), credential.getLastName(),
                 credential.getEmail(), credential.getPhone(), credential.getRole());
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserCredentialResponse> getAllUsers() {
+        Role callerRole = currentCallerRole();
+        if (callerRole != Role.SUPER_ADMIN) {
+            throw new InsufficientRoleException(callerRole + " is not allowed to list all users");
+        }
+
+        return credentialRepository.findAll().stream()
+                .map(c -> new UserCredentialResponse(
+                        c.getUserId(), c.getFirstName(), c.getLastName(), c.getEmail(), c.getPhone(),
+                        c.getRole(), c.getCreatedAt()))
+                .toList();
     }
 
     private void publishUserRegistered(UserCredential credential, Address address) {

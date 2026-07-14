@@ -1,5 +1,6 @@
 package de.ullmann.fooddelivery.deliverservice.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -27,9 +28,15 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.findById(id));
     }
 
-    @GetMapping
+    @GetMapping(params = "orderId")
     public ResponseEntity<DeliveryOrderResponse> getByOrderId(@RequestParam UUID orderId) {
         return ResponseEntity.ok(deliveryService.findByOrderId(orderId));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DeliveryOrderResponse>> getAll(
+            @RequestParam(required = false) DeliveryStatus status) {
+        return ResponseEntity.ok(deliveryService.findAll(status));
     }
 
     @PatchMapping("/{id}/status")

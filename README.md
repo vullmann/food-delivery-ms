@@ -96,6 +96,7 @@ Use `/auth/register/customer` to register, then `/auth/login` to obtain a JWT, a
 | POST   | /auth/register/staff  | Yes (admin) | Register staff (driver/restaurant/admin) |
 | POST   | /auth/login           | No          | Login + get JWT                          |
 | POST   | /auth/validate        | No          | Validate JWT                             |
+| GET    | /auth/users           | Yes (SUPER_ADMIN) | List all user credentials          |
 
 > **Planned refactor:** `/auth/login` currently issues a single long-lived JWT (24h) with no logout endpoint.
 > This will change to short-lived access tokens + refresh tokens (with a `/auth/logout` endpoint to revoke
@@ -129,6 +130,10 @@ Use `/auth/register/customer` to register, then `/auth/login` to obtain a JWT, a
 | GET    | /restaurants/{id}/orders                            | JWT  | All orders for a restaurant   |
 | PATCH  | /restaurants/{id}/orders/{orderId}/status           | JWT  | Update restaurant order status|
 
+> **Known gap:** `RESTAURANT_ADMIN`/`RESTAURANT_EMPLOYEE` accounts aren't scoped to a specific restaurant yet — any
+> staff member with either role can act on any restaurant's data. Scoped out (not implemented) in
+> `PROJECT_CONTEXT.md` → `restaurant-service` → "Design scope: staff-to-restaurant ownership".
+
 ### Orders
 
 | Method | Path                          | Auth | Description              |
@@ -140,12 +145,12 @@ Use `/auth/register/customer` to register, then `/auth/login` to obtain a JWT, a
 
 ### Deliveries & Drivers
 
-| Method | Path                      | Auth | Description                       |
-|--------|---------------------------|------|-----------------------------------|
-| GET    | /deliveries/{id}          | JWT  | Get delivery by ID                |
-| GET    | /deliveries?orderId=      | JWT  | Get delivery by order ID          |
-| PATCH  | /deliveries/{id}/status   | JWT  | Update delivery status            |
-| POST   | /drivers                  | JWT  | Register driver                   |
+| Method | Path                      | Auth | Description                                |
+|--------|---------------------------|------|---------------------------------------------|
+| GET    | /deliveries/{id}          | JWT  | Get delivery by ID                          |
+| GET    | /deliveries?orderId=      | JWT  | Get delivery by order ID                    |
+| GET    | /deliveries               | JWT  | List deliveries (optional ?status=); DELIVERY_DRIVER sees only its own |
+| PATCH  | /deliveries/{id}/status   | JWT  | Update delivery status                      |
 | GET    | /drivers                  | JWT  | List drivers (optional ?status=)  |
 | GET    | /drivers/{id}             | JWT  | Get driver by ID                  |
 | PATCH  | /drivers/{id}/status      | JWT  | Update driver status              |
@@ -173,8 +178,12 @@ Open it locally, log in via the Auth tab to get a JWT, then explore every endpoi
 
 - **Superadmin** — login, creates one staff account per role (`restaurant_admin`, `restaurant_employee`,
   `delivery_admin`, `delivery_driver`), logout (client-side), then a post-logout validate check (expect 400)
-- **Restaurant Admin** / **Restaurant Employee** / **Delivery Admin** / **Delivery Driver** — login + logout
-  (client-side) for the account created above
+- **Restaurant Admin** — login, creates a `restaurant_employee` account (scoped staff creation), logout (client-side)
+- **Restaurant Employee** / **Delivery Driver** — login + logout (client-side) for the account created above
+- **Delivery Admin** — login, creates a `delivery_driver` account (scoped staff creation), logout (client-side)
+
+The scoped staff-creation requests exercise `AuthService.assertCanCreate`: a `RESTAURANT_ADMIN` may only create
+`RESTAURANT_EMPLOYEE` accounts, and a `DELIVERY_ADMIN` may only create `DELIVERY_DRIVER` accounts.
 
 Import it into Postman, set `superadminPassword` (and `baseUrl` if not using the gateway), then run the
 **Superadmin** folder first (it creates the other accounts), followed by the four role folders in any order.

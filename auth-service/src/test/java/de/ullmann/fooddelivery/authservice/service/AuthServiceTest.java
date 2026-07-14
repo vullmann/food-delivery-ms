@@ -9,14 +9,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import de.ullmann.fooddelivery.authservice.dto.AddressRequest;
@@ -24,9 +29,11 @@ import de.ullmann.fooddelivery.authservice.dto.LoginRequest;
 import de.ullmann.fooddelivery.authservice.dto.LoginResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerResponse;
+import de.ullmann.fooddelivery.authservice.dto.UserCredentialResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.entity.UserCredential;
 import de.ullmann.fooddelivery.authservice.exception.EmailAlreadyRegisteredException;
+import de.ullmann.fooddelivery.authservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.authservice.exception.InvalidCredentialsException;
 import de.ullmann.fooddelivery.authservice.exception.InvalidTokenException;
 import de.ullmann.fooddelivery.authservice.repository.UserCredentialRepository;
@@ -59,6 +66,16 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         authService = new AuthService(credentialRepository, jwtService, passwordEncoder, outboxEventService);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(Role role) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
     }
 
     @Test
@@ -151,5 +168,27 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.validate("malformed-subject-token"))
                 .isInstanceOf(InvalidTokenException.class);
+    }
+
+    @Test
+    void getAllUsers_asSuperAdmin_shouldReturnAllUsers() {
+        authenticateAs(Role.SUPER_ADMIN);
+        UserCredential credential = UserCredential.createCustomer(USER_ID, EMAIL, "hashed", "John", "Doe", "+49123");
+        when(credentialRepository.findAll()).thenReturn(List.of(credential));
+
+        List<UserCredentialResponse> response = authService.getAllUsers();
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).userId()).isEqualTo(USER_ID);
+        assertThat(response.get(0).email()).isEqualTo(EMAIL);
+        assertThat(response.get(0).role()).isEqualTo(Role.CUSTOMER);
+    }
+
+    @Test
+    void getAllUsers_asNonSuperAdmin_shouldThrowInsufficientRoleException() {
+        authenticateAs(Role.RESTAURANT_ADMIN);
+
+        assertThatThrownBy(() -> authService.getAllUsers())
+                .isInstanceOf(InsufficientRoleException.class);
     }
 }

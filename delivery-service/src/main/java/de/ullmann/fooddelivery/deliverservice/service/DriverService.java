@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.common.security.Role;
-import de.ullmann.fooddelivery.deliverservice.dto.CreateDriverRequest;
 import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
@@ -29,12 +28,6 @@ public class DriverService {
     private static final String DRIVER_ROLE_AUTHORITY = "ROLE_" + Role.DELIVERY_DRIVER;
 
     private final DriverRepository driverRepository;
-
-    public DriverResponse create(CreateDriverRequest request) {
-        assertCallerManagesDrivers();
-        Driver driver = Driver.create(request.firstName(), request.lastName(), request.phone());
-        return DriverResponse.from(driverRepository.save(driver));
-    }
 
     // Consumes UserRegisteredEvent (role=DELIVERY_DRIVER) so the driver profile shares
     // its id with the auth-service userId; idempotent against redelivery.

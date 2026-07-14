@@ -1,13 +1,11 @@
 package de.ullmann.fooddelivery.deliverservice.controller;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,13 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import de.ullmann.fooddelivery.deliverservice.dto.CreateDriverRequest;
 import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
 import de.ullmann.fooddelivery.deliverservice.exception.DriverNotFoundException;
@@ -45,8 +39,6 @@ class DriverControllerTest {
     @MockitoBean
     private DriverService driverService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-
     private UUID driverId;
     private DriverResponse driverResponse;
 
@@ -55,41 +47,6 @@ class DriverControllerTest {
         driverId = UUID.randomUUID();
         driverResponse = new DriverResponse(driverId, "Max", "Müller", "+49 30 11111111",
                 DriverStatus.AVAILABLE, LocalDateTime.now());
-    }
-
-    // ── POST /drivers ─────────────────────────────────────────────────────────
-
-    @Test
-    void create_shouldReturn201WithDriver() throws Exception {
-        when(driverService.create(any(CreateDriverRequest.class))).thenReturn(driverResponse);
-
-        mockMvc.perform(post("/drivers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new CreateDriverRequest("Max", "Müller", "+49 30 11111111"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(driverId.toString()))
-                .andExpect(jsonPath("$.firstName").value("Max"))
-                .andExpect(jsonPath("$.lastName").value("Müller"))
-                .andExpect(jsonPath("$.status").value("AVAILABLE"));
-    }
-
-    @Test
-    void create_shouldReturn400_whenFirstNameBlank() throws Exception {
-        mockMvc.perform(post("/drivers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new CreateDriverRequest("", "Müller", "+49 30 11111111"))))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void create_shouldReturn400_whenPhoneBlank() throws Exception {
-        mockMvc.perform(post("/drivers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new CreateDriverRequest("Max", "Müller", ""))))
-                .andExpect(status().isBadRequest());
     }
 
     // ── GET /drivers/{id} ─────────────────────────────────────────────────────

@@ -36,6 +36,12 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleInsufficientRole_shouldReturn403() {
+        ProblemDetail pd = handler.handleInsufficientRole(new InsufficientRoleException("not allowed"));
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+    }
+
+    @Test
     void handleValidation_shouldReturn400() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);

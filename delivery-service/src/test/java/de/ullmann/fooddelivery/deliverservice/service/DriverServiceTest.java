@@ -25,7 +25,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDateTime;
 
 import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
-import de.ullmann.fooddelivery.deliverservice.dto.CreateDriverRequest;
 import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
 import de.ullmann.fooddelivery.deliverservice.entity.Driver;
 import de.ullmann.fooddelivery.deliverservice.entity.DriverStatus;
@@ -57,22 +56,6 @@ class DriverServiceTest {
     private void authenticateAsDeliveryDriver() {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_DELIVERY_DRIVER"))));
-    }
-
-    // ── create ────────────────────────────────────────────────────────────────
-
-    @Test
-    void create_shouldSaveAndReturnResponse() {
-        when(driverRepository.save(any(Driver.class))).thenReturn(driver);
-
-        DriverResponse response = driverService.create(
-                new CreateDriverRequest("Max", "Müller", "+49 30 11111111"));
-
-        ArgumentCaptor<Driver> captor = ArgumentCaptor.forClass(Driver.class);
-        verify(driverRepository).save(captor.capture());
-        assertThat(captor.getValue().getFirstName()).isEqualTo("Max");
-        assertThat(captor.getValue().getLastName()).isEqualTo("Müller");
-        assertThat(response.status()).isEqualTo(DriverStatus.AVAILABLE);
     }
 
     // ── registerFromEvent ─────────────────────────────────────────────────────
@@ -224,15 +207,6 @@ class DriverServiceTest {
     }
 
     // ── DELIVERY_DRIVER may not manage the driver roster ────────────────────────
-
-    @Test
-    void create_shouldThrow_whenCallerIsDeliveryDriver() {
-        authenticateAsDeliveryDriver();
-
-        assertThatThrownBy(() -> driverService.create(
-                new CreateDriverRequest("Max", "Müller", "+49 30 11111111")))
-                .isInstanceOf(InsufficientRoleException.class);
-    }
 
     @Test
     void findById_shouldThrow_whenCallerIsDeliveryDriver() {

@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.deliverservice.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
@@ -110,6 +111,20 @@ public class DeliveryService {
         return DeliveryOrderResponse.from(delivery);
     }
 
+    // A DELIVERY_DRIVER caller only ever sees its own assigned deliveries; every other role sees all deliveries.
+    @Transactional(readOnly = true)
+    public List<DeliveryOrderResponse> findAll(DeliveryStatus status) {
+        UUID callerDriverId = callerDriverIdIfDriver();
+        List<DeliveryOrder> deliveries = callerDriverId != null
+                ? (status != null
+                        ? deliveryOrderRepository.findAllByDriverIdAndStatus(callerDriverId, status)
+                        : deliveryOrderRepository.findAllByDriverId(callerDriverId))
+                : (status != null
+                        ? deliveryOrderRepository.findAllByStatus(status)
+                        : deliveryOrderRepository.findAll());
+        return deliveries.stream().map(DeliveryOrderResponse::from).toList();
+    }
+
     private void freeDriver(UUID driverId) {
         if (driverId != null) {
             driverRepository.findById(driverId).ifPresent(Driver::markAvailable);
@@ -132,5 +147,20 @@ public class DeliveryService {
         if (!callerId.equals(delivery.getDriverId())) {
             throw new DeliveryOrderAccessDeniedException(delivery.getId());
         }
+    }
+
+    // Returns the caller's own id if authenticated as DELIVERY_DRIVER (used to scope findAll to its own
+    // deliveries), else null (unrestricted). No authentication in context is treated as not a driver.
+    private UUID callerDriverIdIfDriver() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        boolean isDeliveryDriver = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(DRIVER_ROLE_AUTHORITY));
+        if (!isDeliveryDriver) {
+            return null;
+        }
+        return UUID.fromString((String) authentication.getPrincipal());
     }
 }

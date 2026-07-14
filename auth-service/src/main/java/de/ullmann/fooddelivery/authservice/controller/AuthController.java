@@ -6,11 +6,14 @@ import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterCustomerResponse;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffRequest;
 import de.ullmann.fooddelivery.authservice.dto.RegisterStaffResponse;
+import de.ullmann.fooddelivery.authservice.dto.UserCredentialResponse;
 import de.ullmann.fooddelivery.authservice.dto.ValidateRequest;
 import de.ullmann.fooddelivery.authservice.dto.ValidateResponse;
 import de.ullmann.fooddelivery.authservice.service.AuthService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,5 +50,10 @@ public class AuthController {
     @PostMapping("/validate")
     public ValidateResponse validate(@RequestBody @Valid ValidateRequest req) {
         return authService.validate(req.token());
+    }
+
+    @GetMapping("/users")
+    public List<UserCredentialResponse> getAllUsers() {
+        return authService.getAllUsers();
     }
 }

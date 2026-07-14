@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -102,6 +103,26 @@ class DeliveryControllerTest {
 
         mockMvc.perform(get("/deliveries").param("orderId", orderId.toString()))
                 .andExpect(status().isNotFound());
+    }
+
+    // ── GET /deliveries ───────────────────────────────────────────────────────
+
+    @Test
+    void getAll_shouldReturn200WithAllDeliveries() throws Exception {
+        when(deliveryService.findAll(null)).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/deliveries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(deliveryId.toString()));
+    }
+
+    @Test
+    void getAll_withStatusFilter_shouldReturn200WithFilteredDeliveries() throws Exception {
+        when(deliveryService.findAll(DeliveryStatus.PENDING)).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/deliveries").param("status", "PENDING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
     }
 
     // ── PATCH /deliveries/{id}/status ─────────────────────────────────────────

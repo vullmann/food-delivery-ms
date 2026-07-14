@@ -309,4 +309,59 @@ class DeliveryServiceTest {
                 .isInstanceOf(DeliveryOrderAccessDeniedException.class);
         assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.DRIVER_ASSIGNED);
     }
+
+    // ── findAll ───────────────────────────────────────────────────────────────
+
+    @Test
+    void findAll_withNoStatusFilter_shouldReturnAllDeliveries() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        when(deliveryOrderRepository.findAll()).thenReturn(List.of(delivery));
+
+        List<DeliveryOrderResponse> responses = deliveryService.findAll(null);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).orderId()).isEqualTo(orderId);
+    }
+
+    @Test
+    void findAll_withStatusFilter_shouldReturnFilteredDeliveries() {
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        when(deliveryOrderRepository.findAllByStatus(DeliveryStatus.PENDING)).thenReturn(List.of(delivery));
+
+        List<DeliveryOrderResponse> responses = deliveryService.findAll(DeliveryStatus.PENDING);
+
+        assertThat(responses).hasSize(1);
+        verify(deliveryOrderRepository, never()).findAll();
+    }
+
+    @Test
+    void findAll_whenCallerIsDeliveryDriver_shouldReturnOnlyOwnDeliveries() {
+        UUID driverId = UUID.randomUUID();
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(driverId);
+        when(deliveryOrderRepository.findAllByDriverId(driverId)).thenReturn(List.of(delivery));
+        authenticateAsDeliveryDriver(driverId);
+
+        List<DeliveryOrderResponse> responses = deliveryService.findAll(null);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).driverId()).isEqualTo(driverId);
+        verify(deliveryOrderRepository, never()).findAll();
+        verify(deliveryOrderRepository, never()).findAllByStatus(any());
+    }
+
+    @Test
+    void findAll_whenCallerIsDeliveryDriverWithStatusFilter_shouldReturnOwnFilteredDeliveries() {
+        UUID driverId = UUID.randomUUID();
+        DeliveryOrder delivery = DeliveryOrder.create(orderId, customerId, restaurantId, pickupAddress, deliveryAddress);
+        delivery.assignDriver(driverId);
+        when(deliveryOrderRepository.findAllByDriverIdAndStatus(driverId, DeliveryStatus.DRIVER_ASSIGNED))
+                .thenReturn(List.of(delivery));
+        authenticateAsDeliveryDriver(driverId);
+
+        List<DeliveryOrderResponse> responses = deliveryService.findAll(DeliveryStatus.DRIVER_ASSIGNED);
+
+        assertThat(responses).hasSize(1);
+        verify(deliveryOrderRepository, never()).findAllByDriverId(any());
+    }
 }
