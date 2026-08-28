@@ -4,6 +4,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +49,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onOrderConfirmed_shouldUpdateStatusToConfirmed() throws Exception {
-        OrderConfirmedEvent event = new OrderConfirmedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderConfirmed(objectMapper.writeValueAsString(event));
 
@@ -64,7 +65,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onOrderInPreparation_shouldUpdateStatusToPreparing() throws Exception {
-        OrderInPreparationEvent event = new OrderInPreparationEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderInPreparationEvent event = new OrderInPreparationEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderInPreparation(objectMapper.writeValueAsString(event));
 
@@ -81,7 +82,7 @@ class SqsOrderEventConsumerTest {
     @Test
     void onOrderReadyForDelivery_shouldUpdateStatusToReadyForDelivery() throws Exception {
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(
-                ORDER_ID, CUSTOMER_ID, RESTAURANT_ID, ADDRESS, ADDRESS, LocalDateTime.now());
+                ORDER_ID, CUSTOMER_ID, RESTAURANT_ID, ADDRESS, ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderReadyForDelivery(objectMapper.writeValueAsString(event));
 
@@ -97,7 +98,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onDriverAssigned_shouldUpdateStatusToDriverAssigned() throws Exception {
-        DriverAssignedEvent event = new DriverAssignedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        DriverAssignedEvent event = new DriverAssignedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDriverAssigned(objectMapper.writeValueAsString(event));
 
@@ -113,7 +114,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onOrderOnTheWay_shouldUpdateStatusToOnTheWay() throws Exception {
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(objectMapper.writeValueAsString(event));
 
@@ -129,7 +130,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onOrderDelivered_shouldUpdateStatusToDelivered() throws Exception {
-        OrderDeliveredEvent event = new OrderDeliveredEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderDelivered(objectMapper.writeValueAsString(event));
 
@@ -145,7 +146,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onRestaurantOrderCancelled_shouldUpdateStatusToCancelled() throws Exception {
-        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onRestaurantOrderCancelled(objectMapper.writeValueAsString(event));
 
@@ -161,7 +162,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onDeliveryCancelled_shouldUpdateStatusToCancelled() throws Exception {
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDeliveryCancelled(objectMapper.writeValueAsString(event));
 

@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.mcpservice.dto;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ class DeliveryResponseTest {
 
     @Test
     void constructor_shouldSetAllFields() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         DeliveryResponse response = new DeliveryResponse("del-id", "ord-id", "PENDING", "drv-id", now, now);
 
         assertThat(response.id()).isEqualTo("del-id");

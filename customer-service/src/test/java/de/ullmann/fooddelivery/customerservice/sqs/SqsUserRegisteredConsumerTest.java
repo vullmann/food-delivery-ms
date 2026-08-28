@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,7 @@ class SqsUserRegisteredConsumerTest {
     void onUserRegistered_shouldIgnoreOtherRoles() throws Exception {
         UserRegisteredEvent driverEvent = new UserRegisteredEvent(
                 UUID.randomUUID(), "DELIVERY_DRIVER", "Max", "Müller",
-                "max@example.com", "+49 30 11111111", null, LocalDateTime.now());
+                "max@example.com", "+49 30 11111111", null, LocalDateTime.now(ZoneOffset.UTC));
         String body = objectMapper.writeValueAsString(driverEvent);
 
         consumer.onUserRegistered(body);

@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.authservice.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -135,7 +136,7 @@ public class AuthService {
                         credential.getEmail(),
                         credential.getPhone(),
                         address,
-                        LocalDateTime.now()
+                        LocalDateTime.now(ZoneOffset.UTC)
                 )
         );
     }

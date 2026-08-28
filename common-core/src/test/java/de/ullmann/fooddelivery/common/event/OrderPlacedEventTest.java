@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +20,7 @@ class OrderPlacedEventTest {
     private final UUID restaurantId = UUID.randomUUID();
     private final BigDecimal totalAmount = new BigDecimal("45.50");
     private final Address deliveryAddress = Address.of("Musterstraße 1", "23", "Halle", "06108", "DE");
-    private final LocalDateTime createdAt = LocalDateTime.now();
+    private final LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
     private OrderPlacedEvent createValidEvent() {
         OrderItemDto item = new OrderItemDto(UUID.randomUUID(), "Pasta", 2, new BigDecimal("12.50"));

@@ -1,9 +1,8 @@
 package de.ullmann.fooddelivery.deliverservice.entity;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,11 +36,12 @@ public class Driver {
     @Column(nullable = false)
     private DriverStatus status;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private Driver(UUID id, String firstName, String lastName, String phone) {
         this.id = id;
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;

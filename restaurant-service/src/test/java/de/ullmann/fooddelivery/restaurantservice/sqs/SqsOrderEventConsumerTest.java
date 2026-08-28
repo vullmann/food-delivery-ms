@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,7 +51,7 @@ class SqsOrderEventConsumerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 ORDER_ID, CUSTOMER_ID, RESTAURANT_ID, BigDecimal.valueOf(25.00),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Pizza", 1, BigDecimal.valueOf(25.00))),
-                ADDRESS, LocalDateTime.now());
+                ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderPlaced(objectMapper.writeValueAsString(event));
 
@@ -69,7 +70,7 @@ class SqsOrderEventConsumerTest {
 
     @Test
     void onOrderOnTheWay_shouldCallMarkAsPickedUp() throws Exception {
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(objectMapper.writeValueAsString(event));
 

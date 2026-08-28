@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,7 +47,7 @@ class DriverControllerTest {
     void setUp() {
         driverId = UUID.randomUUID();
         driverResponse = new DriverResponse(driverId, "Max", "Müller", "+49 30 11111111",
-                DriverStatus.AVAILABLE, LocalDateTime.now());
+                DriverStatus.AVAILABLE, LocalDateTime.now(ZoneOffset.UTC));
     }
 
     // ── GET /drivers/{id} ─────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ package de.ullmann.fooddelivery.mcpservice.tools;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,7 +32,7 @@ class OrderToolsTest {
 
     private OrderResponse buildOrder() {
         return new OrderResponse(ORDER_ID, CUSTOMER_ID, "rest-id", "PLACED",
-                BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now());
+                BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now(ZoneOffset.UTC));
     }
 
     @Test

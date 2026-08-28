@@ -2,6 +2,7 @@ package de.ullmann.fooddelivery.mcpservice.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,7 @@ class OrderResponseTest {
 
     @Test
     void constructor_shouldSetAllFields() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         OrderResponse response = new OrderResponse("order-id", "cust-id", "rest-id", "PLACED",
                 BigDecimal.valueOf(25.00), List.of(), now);
 

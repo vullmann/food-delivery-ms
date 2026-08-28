@@ -1,11 +1,10 @@
 package de.ullmann.fooddelivery.restaurantservice.entity;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import jakarta.persistence.CascadeType;
@@ -49,7 +48,7 @@ public class RestaurantOrder {
     @Column(nullable = false)
     private RestaurantOrderStatus status;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private RestaurantOrder(
@@ -58,7 +57,7 @@ public class RestaurantOrder {
             UUID customerId,
             Address deliveryAddress) {
         this.id = UUID.randomUUID();
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         this.customerOrderId = customerOrderId;
         this.restaurantId = restaurantId;
         this.customerId = customerId;

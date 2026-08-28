@@ -29,7 +29,7 @@ public class OutboxEventService {
                 .payloadType(payloadObject.getClass().getSimpleName())
                 .payload(payload)
                 .build();
-        event.setCreatedAt(java.time.LocalDateTime.now());
+        event.setCreatedAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
         outboxEventRepository.save(event);
     }
 

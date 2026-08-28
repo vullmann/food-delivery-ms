@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,7 @@ class DeliveryServiceClientTest {
     @Test
     void getDeliveryByOrderId_success_shouldReturnDelivery() throws Exception {
         DeliveryResponse expected = new DeliveryResponse("del-id", "ord-id", "PENDING", null,
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC), LocalDateTime.now(ZoneOffset.UTC));
 
         String jsonPayload = objectMapper.writeValueAsString(expected);
 

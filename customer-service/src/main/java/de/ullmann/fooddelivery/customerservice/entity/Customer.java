@@ -1,9 +1,8 @@
 package de.ullmann.fooddelivery.customerservice.entity;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import jakarta.persistence.Column;
@@ -39,7 +38,6 @@ public class Customer {
     @Embedded
     private Address address;
 
-    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -61,7 +59,7 @@ public class Customer {
             Address address) {
         var customer = new Customer();
         customer.id = id;
-        customer.createdAt = LocalDateTime.now();
+        customer.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         customer.firstName = firstName;
         customer.lastName = lastName;
         customer.email = email;

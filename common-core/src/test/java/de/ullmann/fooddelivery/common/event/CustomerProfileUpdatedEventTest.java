@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.common.event;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ class CustomerProfileUpdatedEventTest {
     @Test
     void create_shouldStoreAllFields() {
         UUID customerId = UUID.randomUUID();
-        LocalDateTime updatedAt = LocalDateTime.now();
+        LocalDateTime updatedAt = LocalDateTime.now(ZoneOffset.UTC);
 
         CustomerProfileUpdatedEvent event = new CustomerProfileUpdatedEvent(customerId, "+49123456789", updatedAt);
 
@@ -29,14 +30,14 @@ class CustomerProfileUpdatedEventTest {
 
     @Test
     void create_withNullCustomerId_shouldThrowNullPointerException() {
-        assertThatThrownBy(() -> new CustomerProfileUpdatedEvent(null, "+49123456789", LocalDateTime.now()))
+        assertThatThrownBy(() -> new CustomerProfileUpdatedEvent(null, "+49123456789", LocalDateTime.now(ZoneOffset.UTC)))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("customerId");
     }
 
     @Test
     void create_withNullPhone_shouldThrowNullPointerException() {
-        assertThatThrownBy(() -> new CustomerProfileUpdatedEvent(UUID.randomUUID(), null, LocalDateTime.now()))
+        assertThatThrownBy(() -> new CustomerProfileUpdatedEvent(UUID.randomUUID(), null, LocalDateTime.now(ZoneOffset.UTC)))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("phone");
     }

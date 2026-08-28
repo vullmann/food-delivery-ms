@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,8 +62,8 @@ class DeliveryControllerTest {
                 pickupAddress,
                 deliveryAddress,
                 DeliveryStatus.PENDING,
-                LocalDateTime.now(),
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC),
+                LocalDateTime.now(ZoneOffset.UTC));
     }
 
     // ── GET /deliveries/{id} ──────────────────────────────────────────────────

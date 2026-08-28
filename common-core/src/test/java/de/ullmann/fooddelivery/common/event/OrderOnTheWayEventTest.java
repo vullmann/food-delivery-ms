@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ class OrderOnTheWayEventTest {
 
     private final UUID orderId = UUID.randomUUID();
     private final UUID customerId = UUID.randomUUID();
-    private final LocalDateTime pickedUpAt = LocalDateTime.now();
+    private final LocalDateTime pickedUpAt = LocalDateTime.now(ZoneOffset.UTC);
 
     @Test
     void shouldCreateOrderOnTheWayEventWithValidData() {

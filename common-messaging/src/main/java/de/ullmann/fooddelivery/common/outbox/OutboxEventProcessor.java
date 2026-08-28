@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.common.outbox;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class OutboxEventProcessor {
         for (OutboxEvent event : events) {
             try {
                 messagePublisher.publish(event.getEventType(), event.getAggregateId().toString(), event.getPayload());
-                event.setProcessedAt(LocalDateTime.now());
+                event.setProcessedAt(LocalDateTime.now(ZoneOffset.UTC));
             } catch (Exception e) {
                 // log.error("Failed to publish outbox event {}: {}", event.getId(), e.getMessage());
             }

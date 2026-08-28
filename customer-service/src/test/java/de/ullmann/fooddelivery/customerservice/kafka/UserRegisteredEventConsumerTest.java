@@ -4,6 +4,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class UserRegisteredEventConsumerTest {
     void onUserRegistered_shouldDelegateToCustomerService_whenRoleIsCustomer() {
         UserRegisteredEvent event = new UserRegisteredEvent(
                 UUID.randomUUID(), "CUSTOMER", "Jane", "Doe",
-                "jane@example.com", "+49123456789", null, LocalDateTime.now());
+                "jane@example.com", "+49123456789", null, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onUserRegistered(event, null);
 
@@ -39,7 +40,7 @@ class UserRegisteredEventConsumerTest {
     void onUserRegistered_shouldIgnoreOtherRoles() {
         UserRegisteredEvent event = new UserRegisteredEvent(
                 UUID.randomUUID(), "DELIVERY_DRIVER", "Max", "Müller",
-                "max@example.com", "+49 30 11111111", null, LocalDateTime.now());
+                "max@example.com", "+49 30 11111111", null, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onUserRegistered(event, null);
 

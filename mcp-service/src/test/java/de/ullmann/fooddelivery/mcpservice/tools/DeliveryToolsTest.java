@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.mcpservice.tools;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class DeliveryToolsTest {
     @Test
     void getDeliveryStatus_whenFound_shouldReturnFormattedInfo() {
         DeliveryResponse response = new DeliveryResponse("del-id", ORDER_ID, "PENDING", "drv-id",
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC), LocalDateTime.now(ZoneOffset.UTC));
         when(deliveryServiceClient.getDeliveryByOrderId(ORDER_ID)).thenReturn(Optional.of(response));
 
         String result = deliveryTools.getDeliveryStatus(ORDER_ID);

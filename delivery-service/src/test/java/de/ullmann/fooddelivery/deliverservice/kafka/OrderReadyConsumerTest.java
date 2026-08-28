@@ -3,6 +3,7 @@ package de.ullmann.fooddelivery.deliverservice.kafka;
 import static org.mockito.Mockito.verify;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class OrderReadyConsumerTest {
                 UUID.randomUUID(),
                 Address.of("Restaurant St", "5", "Berlin", "10119", "Germany"),
                 Address.of("Main St", "1", "Berlin", "10115", "Germany"),
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
 
         orderReadyConsumer.onOrderReady(event, null);
 

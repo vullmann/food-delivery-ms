@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +54,7 @@ class OrderServiceClientTest {
     @Test
     void getOrderById_success_shouldReturnOrder() throws Exception { // Added throws Exception
         OrderResponse expected = new OrderResponse("ord-id", "cust-id", "rest-id", "PLACED",
-                BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now());
+                BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now(ZoneOffset.UTC));
         String jsonPayload = objectMapper.writeValueAsString(expected);
 
         server.expect(requestTo("/orders/ord-id"))
@@ -85,7 +86,7 @@ class OrderServiceClientTest {
     void getOrdersByCustomer_success_shouldReturnList() throws Exception { // Added throws Exception
         List<OrderResponse> expected = List.of(
                 new OrderResponse("ord-id", "cust-id", "rest-id", "PLACED",
-                        BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now()));
+                        BigDecimal.valueOf(25.00), List.of(), LocalDateTime.now(ZoneOffset.UTC)));
         String jsonPayload = objectMapper.writeValueAsString(expected);
 
         server.expect(requestTo("/orders/customer/cust-id"))

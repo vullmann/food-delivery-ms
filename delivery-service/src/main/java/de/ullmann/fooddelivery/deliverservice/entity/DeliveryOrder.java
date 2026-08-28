@@ -1,9 +1,8 @@
 package de.ullmann.fooddelivery.deliverservice.entity;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import jakarta.persistence.AttributeOverride;
@@ -53,7 +52,7 @@ public class DeliveryOrder {
     @Column(nullable = false)
     private DeliveryStatus status;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -66,13 +65,14 @@ public class DeliveryOrder {
             Address pickupAddress,
             Address deliveryAddress) {
         this.id = UUID.randomUUID();
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         this.orderId = orderId;
         this.customerId = customerId;
         this.restaurantId = restaurantId;
         this.pickupAddress = pickupAddress;
         this.deliveryAddress = deliveryAddress;
         this.status = DeliveryStatus.PENDING;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public static DeliveryOrder create(
@@ -95,6 +95,6 @@ public class DeliveryOrder {
                     "Cannot transition from %s to %s".formatted(this.status, newStatus));
         }
         this.status = newStatus;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

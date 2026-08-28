@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.authservice.controller;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -125,7 +126,7 @@ class AuthControllerTest {
     @Test
     void getAllUsers_shouldReturn200WithUserList() throws Exception {
         UserCredentialResponse user = new UserCredentialResponse(
-                CUSTOMER_ID, "John", "Doe", EMAIL, "+49123", Role.CUSTOMER, LocalDateTime.now());
+                CUSTOMER_ID, "John", "Doe", EMAIL, "+49123", Role.CUSTOMER, LocalDateTime.now(ZoneOffset.UTC));
         when(authService.getAllUsers()).thenReturn(List.of(user));
 
         mockMvc.perform(get("/auth/users").with(authenticatedAs("SUPER_ADMIN")))

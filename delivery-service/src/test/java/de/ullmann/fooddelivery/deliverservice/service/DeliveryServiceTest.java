@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -72,7 +73,7 @@ class DeliveryServiceTest {
         restaurantId = UUID.randomUUID();
         pickupAddress = Address.of("Restaurant St", "5", "Berlin", "10119", "Germany");
         deliveryAddress = Address.of("Main St", "1", "Berlin", "10115", "Germany");
-        readyEvent = new OrderReadyForDeliveryEvent(orderId, customerId, restaurantId, pickupAddress, deliveryAddress, LocalDateTime.now());
+        readyEvent = new OrderReadyForDeliveryEvent(orderId, customerId, restaurantId, pickupAddress, deliveryAddress, LocalDateTime.now(ZoneOffset.UTC));
     }
 
     @AfterEach

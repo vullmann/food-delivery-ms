@@ -4,9 +4,9 @@ import de.ullmann.fooddelivery.common.model.Address;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static lombok.AccessLevel.PROTECTED;
@@ -42,7 +42,6 @@ public class Restaurant {
     @Column(nullable = false)
     private boolean isOpen;
 
-    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -55,7 +54,7 @@ public class Restaurant {
                                     boolean isOpen) {
         Restaurant restaurant = new Restaurant();
         restaurant.id = UUID.randomUUID();
-        restaurant.createdAt = LocalDateTime.now();
+        restaurant.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         restaurant.name = name;
         restaurant.description = description;
         restaurant.address = address;

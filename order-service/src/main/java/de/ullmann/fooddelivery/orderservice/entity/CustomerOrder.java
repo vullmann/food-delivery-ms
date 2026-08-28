@@ -2,11 +2,10 @@ package de.ullmann.fooddelivery.orderservice.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import jakarta.persistence.CascadeType;
@@ -33,7 +32,7 @@ public class CustomerOrder {
     @Id
     private UUID id;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -70,8 +69,8 @@ public class CustomerOrder {
             Address deliveryAddress,
             List<CustomerOrderItem> items) {
         this.id = UUID.randomUUID();
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
         this.customerId = customerId;
         this.restaurantId = restaurantId;
         this.deliveryAddress = deliveryAddress;
@@ -110,6 +109,6 @@ public class CustomerOrder {
                     "Cannot transition from %s to %s".formatted(this.status, newStatus));
         }
         this.status = newStatus;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

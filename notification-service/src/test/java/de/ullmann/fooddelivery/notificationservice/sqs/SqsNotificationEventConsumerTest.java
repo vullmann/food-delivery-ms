@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -63,7 +64,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onCustomerCreated_shouldUpsertPhoneAndSendWelcome() throws Exception {
         CustomerCreatedEvent event = new CustomerCreatedEvent(
-                CUSTOMER_ID, "John", "Doe", "john@doe.com", PHONE, ADDRESS, LocalDateTime.now());
+                CUSTOMER_ID, "John", "Doe", "john@doe.com", PHONE, ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onCustomerCreated(objectMapper.writeValueAsString(event));
 
@@ -74,7 +75,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onCustomerCreated_shouldUnwrapSnsEnvelopeAndProcess() throws Exception {
         CustomerCreatedEvent event = new CustomerCreatedEvent(
-                CUSTOMER_ID, "Anna", "Smith", "anna@smith.com", PHONE, ADDRESS, LocalDateTime.now());
+                CUSTOMER_ID, "Anna", "Smith", "anna@smith.com", PHONE, ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
         String snsEnvelope = objectMapper.writeValueAsString(
                 Map.of("Type", "Notification", "Message", objectMapper.writeValueAsString(event)));
 
@@ -93,7 +94,7 @@ class SqsNotificationEventConsumerTest {
 
     @Test
     void onCustomerProfileUpdated_shouldUpsertPhone() throws Exception {
-        CustomerProfileUpdatedEvent event = new CustomerProfileUpdatedEvent(CUSTOMER_ID, PHONE, LocalDateTime.now());
+        CustomerProfileUpdatedEvent event = new CustomerProfileUpdatedEvent(CUSTOMER_ID, PHONE, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onCustomerProfileUpdated(objectMapper.writeValueAsString(event));
 
@@ -115,7 +116,7 @@ class SqsNotificationEventConsumerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(), CUSTOMER_ID, UUID.randomUUID(), BigDecimal.valueOf(25.00),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Pizza", 1, BigDecimal.valueOf(25.00))),
-                ADDRESS, LocalDateTime.now());
+                ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderPlaced(objectMapper.writeValueAsString(event));
 
@@ -128,7 +129,7 @@ class SqsNotificationEventConsumerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(), CUSTOMER_ID, UUID.randomUUID(), BigDecimal.valueOf(25.00),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Pizza", 1, BigDecimal.valueOf(25.00))),
-                ADDRESS, LocalDateTime.now());
+                ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderPlaced(objectMapper.writeValueAsString(event));
 
@@ -145,7 +146,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderConfirmed_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderConfirmed(objectMapper.writeValueAsString(event));
 
@@ -162,7 +163,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderConfirmed_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderConfirmed(objectMapper.writeValueAsString(event));
 
@@ -172,7 +173,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderInPreparation_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderInPreparation(objectMapper.writeValueAsString(event));
 
@@ -189,7 +190,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderInPreparation_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderInPreparation(objectMapper.writeValueAsString(event));
 
@@ -199,7 +200,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderOnTheWay_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(objectMapper.writeValueAsString(event));
 
@@ -216,7 +217,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderOnTheWay_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(objectMapper.writeValueAsString(event));
 
@@ -226,7 +227,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderDelivered_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderDelivered(objectMapper.writeValueAsString(event));
 
@@ -243,7 +244,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onOrderDelivered_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderDelivered(objectMapper.writeValueAsString(event));
 
@@ -253,7 +254,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onRestaurantOrderCancelled_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onRestaurantOrderCancelled(objectMapper.writeValueAsString(event));
 
@@ -270,7 +271,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onRestaurantOrderCancelled_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onRestaurantOrderCancelled(objectMapper.writeValueAsString(event));
 
@@ -280,7 +281,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onDeliveryCancelled_whenPhoneKnown_shouldSendNotification() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDeliveryCancelled(objectMapper.writeValueAsString(event));
 
@@ -297,7 +298,7 @@ class SqsNotificationEventConsumerTest {
     @Test
     void onDeliveryCancelled_whenPhoneNull_shouldSkip() throws Exception {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDeliveryCancelled(objectMapper.writeValueAsString(event));
 

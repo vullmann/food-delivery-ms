@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +56,7 @@ class NotificationEventConsumerTest {
     @Test
     void onCustomerCreated_shouldUpsertAndSendWelcome() {
         CustomerCreatedEvent event = new CustomerCreatedEvent(
-                CUSTOMER_ID, "John", "Doe", "john@doe.com", PHONE, ADDRESS, LocalDateTime.now());
+                CUSTOMER_ID, "John", "Doe", "john@doe.com", PHONE, ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onCustomerCreated(event);
 
@@ -65,7 +66,7 @@ class NotificationEventConsumerTest {
 
     @Test
     void onCustomerProfileUpdated_shouldUpsertOnly() {
-        CustomerProfileUpdatedEvent event = new CustomerProfileUpdatedEvent(CUSTOMER_ID, PHONE, LocalDateTime.now());
+        CustomerProfileUpdatedEvent event = new CustomerProfileUpdatedEvent(CUSTOMER_ID, PHONE, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onCustomerProfileUpdated(event);
 
@@ -78,7 +79,7 @@ class NotificationEventConsumerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(), CUSTOMER_ID, UUID.randomUUID(), BigDecimal.valueOf(25.00),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Pizza", 1, BigDecimal.valueOf(25.00))),
-                ADDRESS, LocalDateTime.now());
+                ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderPlaced(event);
 
@@ -91,7 +92,7 @@ class NotificationEventConsumerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(), CUSTOMER_ID, UUID.randomUUID(), BigDecimal.valueOf(25.00),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Pizza", 1, BigDecimal.valueOf(25.00))),
-                ADDRESS, LocalDateTime.now());
+                ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderPlaced(event);
 
@@ -101,7 +102,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderConfirmed_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderConfirmed(event);
 
@@ -111,7 +112,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderConfirmed_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderConfirmed(event);
 
@@ -122,7 +123,7 @@ class NotificationEventConsumerTest {
     void onOrderInPreparation_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
         OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderInPreparation(event);
 
@@ -133,7 +134,7 @@ class NotificationEventConsumerTest {
     void onOrderInPreparation_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
         OrderInPreparationEvent event = new OrderInPreparationEvent(UUID.randomUUID(), CUSTOMER_ID,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderInPreparation(event);
 
@@ -144,7 +145,7 @@ class NotificationEventConsumerTest {
     void onOrderReadyForDelivery_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(UUID.randomUUID(), CUSTOMER_ID, RESTAURANT_ID,
-                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now());
+                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderReadyForDelivery(event);
 
@@ -155,7 +156,7 @@ class NotificationEventConsumerTest {
     void onOrderReadyForDelivery_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(UUID.randomUUID(), CUSTOMER_ID, RESTAURANT_ID,
-                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now());
+                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderReadyForDelivery(event);
 
@@ -165,7 +166,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderOnTheWay_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(event);
 
@@ -175,7 +176,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderOnTheWay_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderOnTheWay(event);
 
@@ -185,7 +186,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderDelivered_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderDelivered(event);
 
@@ -195,7 +196,7 @@ class NotificationEventConsumerTest {
     @Test
     void onOrderDelivered_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onOrderDelivered(event);
 
@@ -206,7 +207,7 @@ class NotificationEventConsumerTest {
     void onRestaurantOrderCancelled_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
         RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onRestaurantOrderCancelled(event);
 
@@ -217,7 +218,7 @@ class NotificationEventConsumerTest {
     void onRestaurantOrderCancelled_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
         RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(UUID.randomUUID(), CUSTOMER_ID,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onRestaurantOrderCancelled(event);
 
@@ -227,7 +228,7 @@ class NotificationEventConsumerTest {
     @Test
     void onDeliveryCancelled_whenPhoneKnown_shouldSendNotification() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(PHONE);
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDeliveryCancelled(event);
 
@@ -237,7 +238,7 @@ class NotificationEventConsumerTest {
     @Test
     void onDeliveryCancelled_whenPhoneNull_shouldSkip() {
         when(phoneStore.getOrWarn(CUSTOMER_ID)).thenReturn(null);
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(UUID.randomUUID(), CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
 
         consumer.onDeliveryCancelled(event);
 

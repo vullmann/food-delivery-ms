@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ class RestaurantControllerTest {
         restaurantId = UUID.randomUUID();
         Address address = Address.of("Main St", "1", "Berlin", "10115", "Germany");
         restaurantResponse = new RestaurantResponse(restaurantId, "Pizza Roma", "Best pizza",
-                        address, "+49123456", "pizza@roma.de", CuisineType.PIZZA, true, LocalDateTime.now());
+                        address, "+49123456", "pizza@roma.de", CuisineType.PIZZA, true, LocalDateTime.now(ZoneOffset.UTC));
     }
 
     // ── POST /restaurants ─────────────────────────────────────────────────────

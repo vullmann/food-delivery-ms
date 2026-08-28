@@ -2,6 +2,7 @@ package de.ullmann.fooddelivery.orderservice.kafka;
 
 import static org.mockito.Mockito.verify;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -40,14 +41,14 @@ class CustomerOrderEventConsumerTest {
 
     @Test
     void onOrderConfirmed_shouldUpdateStatusToConfirmed() {
-        OrderConfirmedEvent event = new OrderConfirmedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderConfirmedEvent event = new OrderConfirmedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onOrderConfirmed(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.CONFIRMED);
     }
 
     @Test
     void onOrderInPreparation_shouldUpdateStatusToPreparing() {
-        OrderInPreparationEvent event = new OrderInPreparationEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderInPreparationEvent event = new OrderInPreparationEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onOrderInPreparation(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.PREPARING);
     }
@@ -55,28 +56,28 @@ class CustomerOrderEventConsumerTest {
     @Test
     void onOrderReadyForDelivery_shouldUpdateStatusToReadyForDelivery() {
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent(ORDER_ID, CUSTOMER_ID, RESTAURANT_ID,
-                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now());
+                PICKUP_ADDRESS, DELIVERY_ADDRESS, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onOrderReadyForDelivery(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.READY_FOR_DELIVERY);
     }
 
     @Test
     void onDriverAssigned_shouldUpdateStatusToDriverAssigned() {
-        DriverAssignedEvent event = new DriverAssignedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        DriverAssignedEvent event = new DriverAssignedEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onDriverAssigned(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.DRIVER_ASSIGNED);
     }
 
     @Test
     void onOrderOnTheWay_shouldUpdateStatusToOnTheWay() {
-        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderOnTheWayEvent event = new OrderOnTheWayEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onOrderOnTheWay(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.ON_THE_WAY);
     }
 
     @Test
     void onOrderDelivered_shouldUpdateStatusToDelivered() {
-        OrderDeliveredEvent event = new OrderDeliveredEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        OrderDeliveredEvent event = new OrderDeliveredEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onOrderDelivered(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.DELIVERED);
     }
@@ -84,14 +85,14 @@ class CustomerOrderEventConsumerTest {
     @Test
     void onRestaurantOrderCancelled_shouldUpdateStatusToCancelled() {
         RestaurantOrderCancelledEvent event = new RestaurantOrderCancelledEvent(ORDER_ID, CUSTOMER_ID,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
         consumer.onRestaurantOrderCancelled(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.CANCELLED);
     }
 
     @Test
     void onDeliveryCancelled_shouldUpdateStatusToCancelled() {
-        DeliveryCancelledEvent event = new DeliveryCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now());
+        DeliveryCancelledEvent event = new DeliveryCancelledEvent(ORDER_ID, CUSTOMER_ID, LocalDateTime.now(ZoneOffset.UTC));
         consumer.onDeliveryCancelled(event);
         verify(customerOrderService).updateStatus(ORDER_ID, CustomerOrderStatus.CANCELLED);
     }

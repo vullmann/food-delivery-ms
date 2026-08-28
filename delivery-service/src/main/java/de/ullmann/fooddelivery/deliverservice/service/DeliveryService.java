@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.deliverservice.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,7 +53,7 @@ public class DeliveryService {
                     delivery.getOrderId(),
                     DriverAssignedEvent.TOPIC,
                     new DriverAssignedEvent(delivery.getOrderId(),
-                            delivery.getCustomerId(), LocalDateTime.now()));
+                            delivery.getCustomerId(), LocalDateTime.now(ZoneOffset.UTC)));
         });
 
         deliveryOrderRepository.save(delivery);
@@ -71,14 +72,14 @@ public class DeliveryService {
                     delivery.getOrderId(),
                     OrderOnTheWayEvent.TOPIC,
                     new OrderOnTheWayEvent(delivery.getOrderId(),
-                            delivery.getCustomerId(), LocalDateTime.now()));
+                            delivery.getCustomerId(), LocalDateTime.now(ZoneOffset.UTC)));
             case DELIVERED -> {
                 outboxEventService.createEvent(
                         AGGREGATE_TYPE,
                         delivery.getOrderId(),
                         OrderDeliveredEvent.TOPIC,
                         new OrderDeliveredEvent(delivery.getOrderId(),
-                                delivery.getCustomerId(), LocalDateTime.now()));
+                                delivery.getCustomerId(), LocalDateTime.now(ZoneOffset.UTC)));
                 freeDriver(delivery.getDriverId());
             }
             case CANCELLED -> {
@@ -87,7 +88,7 @@ public class DeliveryService {
                         delivery.getOrderId(),
                         DeliveryCancelledEvent.TOPIC,
                         new DeliveryCancelledEvent(delivery.getOrderId(),
-                                delivery.getCustomerId(), LocalDateTime.now()));
+                                delivery.getCustomerId(), LocalDateTime.now(ZoneOffset.UTC)));
                 freeDriver(delivery.getDriverId());
             }
             default -> {

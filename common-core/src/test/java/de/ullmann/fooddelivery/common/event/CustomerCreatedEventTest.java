@@ -3,6 +3,7 @@ package de.ullmann.fooddelivery.common.event;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ class CustomerCreatedEventTest {
     private final String email = "max.mustermann@example.com";
     private final String phone = "+49123456789";
     private final Address address = Address.of("Musterstraße 1", "23", "Halle", "06108", "DE");
-    private final LocalDateTime createdAt = LocalDateTime.now();
+    private final LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
     @Test
     void shouldCreateEventWithValidData() {

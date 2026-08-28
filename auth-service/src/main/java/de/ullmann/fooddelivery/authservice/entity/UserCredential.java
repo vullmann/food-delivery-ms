@@ -1,9 +1,8 @@
 package de.ullmann.fooddelivery.authservice.entity;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
 
 import de.ullmann.fooddelivery.common.security.Role;
 
@@ -48,7 +47,6 @@ public class UserCredential {
     @Column(nullable = false)
     private Role role;
 
-    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -61,6 +59,7 @@ public class UserCredential {
             String phone) {
         var credential = new UserCredential();
         credential.id = UUID.randomUUID();
+        credential.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         credential.userId = userId;
         credential.email = email;
         credential.hashedPassword = hashedPassword;
@@ -80,6 +79,7 @@ public class UserCredential {
             Role role) {
         var credential = new UserCredential();
         credential.id = UUID.randomUUID();
+        credential.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         credential.userId = credential.id;
         credential.email = email;
         credential.hashedPassword = hashedPassword;
