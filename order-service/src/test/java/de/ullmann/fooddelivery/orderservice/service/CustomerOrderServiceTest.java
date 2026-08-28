@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,14 +22,22 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
+import de.ullmann.fooddelivery.common.security.Role;
 import de.ullmann.fooddelivery.orderservice.dto.AddressRequest;
 import de.ullmann.fooddelivery.orderservice.dto.CreateCustomerOrderRequest;
 import de.ullmann.fooddelivery.orderservice.dto.CustomerOrderItemRequest;
 import de.ullmann.fooddelivery.orderservice.entity.CustomerOrder;
+import de.ullmann.fooddelivery.orderservice.entity.CustomerOrderItem;
 import de.ullmann.fooddelivery.orderservice.entity.CustomerOrderStatus;
+import de.ullmann.fooddelivery.orderservice.exception.CustomerOrderAccessDeniedException;
 import de.ullmann.fooddelivery.orderservice.exception.CustomerOrderNotFoundException;
+import de.ullmann.fooddelivery.orderservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.orderservice.repository.CustomerOrderRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,6 +75,16 @@ class CustomerOrderServiceTest {
                         new CustomerOrderItemRequest(UUID.randomUUID(), "Pasta", "small", 1, new BigDecimal("15.00"))
                 )
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(UUID principalId, String role) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                principalId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
     }
 
     @Test
@@ -205,5 +224,134 @@ class CustomerOrderServiceTest {
         );
 
         return customerOrderService.placeOrder(request);
+    }
+
+    // Builds a CustomerOrder entity directly (bypassing placeOrder) so test fixtures aren't subject to
+    // the authorization check under test.
+    private CustomerOrder buildOrder(UUID customerId, UUID restaurantId) {
+        return CustomerOrder.create(
+                customerId,
+                restaurantId,
+                Address.of("St", "1", "City", "12345", "Country"),
+                List.of(CustomerOrderItem.create(UUID.randomUUID(), "Test Item", "description", 1,
+                        new BigDecimal("10.00"))));
+    }
+
+    // ── placeOrder authorization ─────────────────────────────────────────────
+
+    @Test
+    void placeOrder_shouldSucceed_whenCallerIsCustomerPlacingOwnOrder() {
+        authenticateAs(customerId, Role.CUSTOMER.name());
+        when(customerOrderRepository.save(any(CustomerOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CustomerOrder result = customerOrderService.placeOrder(createCustomerOrderRequest);
+
+        assertEquals(customerId, result.getCustomerId());
+    }
+
+    @Test
+    void placeOrder_shouldThrow_whenCallerIsCustomerPlacingForAnotherCustomer() {
+        authenticateAs(UUID.randomUUID(), Role.CUSTOMER.name());
+
+        assertThrows(CustomerOrderAccessDeniedException.class,
+                () -> customerOrderService.placeOrder(createCustomerOrderRequest));
+    }
+
+    @Test
+    void placeOrder_shouldSucceed_whenCallerIsSuperAdmin() {
+        authenticateAs(UUID.randomUUID(), Role.SUPER_ADMIN.name());
+        when(customerOrderRepository.save(any(CustomerOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CustomerOrder result = customerOrderService.placeOrder(createCustomerOrderRequest);
+
+        assertEquals(customerId, result.getCustomerId());
+    }
+
+    @Test
+    void placeOrder_shouldThrow_whenCallerIsNotCustomerOrSuperAdmin() {
+        authenticateAs(UUID.randomUUID(), Role.DELIVERY_DRIVER.name());
+
+        assertThrows(InsufficientRoleException.class,
+                () -> customerOrderService.placeOrder(createCustomerOrderRequest));
+    }
+
+    // ── findOrder authorization ───────────────────────────────────────────────
+
+    @Test
+    void findOrder_shouldThrow_whenCallerIsADifferentCustomer() {
+        UUID orderId = UUID.randomUUID();
+        CustomerOrder order = buildOrder(customerId, restaurantId);
+        when(customerOrderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        authenticateAs(UUID.randomUUID(), Role.CUSTOMER.name());
+
+        assertThrows(CustomerOrderAccessDeniedException.class, () -> customerOrderService.findOrder(orderId));
+    }
+
+    @Test
+    void findOrder_shouldSucceed_whenCallerIsTheOwningCustomer() {
+        UUID orderId = UUID.randomUUID();
+        CustomerOrder order = buildOrder(customerId, restaurantId);
+        when(customerOrderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        authenticateAs(customerId, Role.CUSTOMER.name());
+
+        CustomerOrder result = customerOrderService.findOrder(orderId);
+
+        assertEquals(customerId, result.getCustomerId());
+    }
+
+    @Test
+    void findOrder_shouldSucceed_whenCallerIsStaffViewingAnotherCustomersOrder() {
+        UUID orderId = UUID.randomUUID();
+        CustomerOrder order = buildOrder(customerId, restaurantId);
+        when(customerOrderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        authenticateAs(UUID.randomUUID(), Role.RESTAURANT_ADMIN.name());
+
+        CustomerOrder result = customerOrderService.findOrder(orderId);
+
+        assertEquals(customerId, result.getCustomerId());
+    }
+
+    // ── findOrdersByCustomer authorization ───────────────────────────────────
+
+    @Test
+    void findOrdersByCustomer_shouldThrow_whenCallerIsADifferentCustomer() {
+        authenticateAs(UUID.randomUUID(), Role.CUSTOMER.name());
+
+        assertThrows(CustomerOrderAccessDeniedException.class,
+                () -> customerOrderService.findOrdersByCustomer(customerId));
+    }
+
+    @Test
+    void findOrdersByCustomer_shouldSucceed_whenCallerIsTheOwningCustomer() {
+        when(customerOrderRepository.findAllByCustomerId(customerId)).thenReturn(List.of());
+        authenticateAs(customerId, Role.CUSTOMER.name());
+
+        List<CustomerOrder> result = customerOrderService.findOrdersByCustomer(customerId);
+
+        assertNotNull(result);
+    }
+
+    // ── updateStatus authorization ────────────────────────────────────────────
+
+    @Test
+    void updateStatus_shouldThrow_whenCallerIsCustomer() {
+        UUID orderId = UUID.randomUUID();
+        authenticateAs(customerId, Role.CUSTOMER.name());
+
+        assertThrows(InsufficientRoleException.class,
+                () -> customerOrderService.updateStatus(orderId, CustomerOrderStatus.CONFIRMED));
+    }
+
+    @Test
+    void updateStatus_shouldSucceed_whenCallerIsRestaurantEmployee() {
+        UUID orderId = UUID.randomUUID();
+        CustomerOrder order = buildOrder(customerId, restaurantId);
+        order.transitionTo(CustomerOrderStatus.PENDING);
+        when(customerOrderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        authenticateAs(UUID.randomUUID(), Role.RESTAURANT_EMPLOYEE.name());
+
+        CustomerOrder result = customerOrderService.updateStatus(orderId, CustomerOrderStatus.CONFIRMED);
+
+        assertEquals(CustomerOrderStatus.CONFIRMED, result.getStatus());
     }
 }
