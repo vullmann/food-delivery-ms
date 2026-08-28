@@ -116,19 +116,24 @@ Use `/auth/register/customer` to register, then `/auth/login` to obtain a JWT, a
 
 | Method | Path                                                | Auth | Description                   |
 |--------|-----------------------------------------------------|------|-------------------------------|
-| POST   | /restaurants                                        | JWT  | Create restaurant             |
+| POST   | /restaurants                                        | JWT  | Create restaurant (SUPER_ADMIN/RESTAURANT_ADMIN only) |
 | GET    | /restaurants/{id}                                   | JWT  | Get restaurant by ID          |
 | GET    | /restaurants?cuisineType=                           | JWT  | Filter by cuisine type        |
 | GET    | /restaurants?isOpen=                                | JWT  | Filter by availability        |
-| PUT    | /restaurants/{id}                                   | JWT  | Update restaurant             |
-| DELETE | /restaurants/{id}                                   | JWT  | Delete restaurant             |
-| POST   | /restaurants/{id}/menu-items                        | JWT  | Add menu item                 |
+| PUT    | /restaurants/{id}                                   | JWT  | Update restaurant (SUPER_ADMIN/RESTAURANT_ADMIN only) |
+| DELETE | /restaurants/{id}                                   | JWT  | Delete restaurant (SUPER_ADMIN/RESTAURANT_ADMIN only) |
+| POST   | /restaurants/{id}/menu-items                        | JWT  | Add menu item (SUPER_ADMIN/RESTAURANT_ADMIN only) |
 | GET    | /restaurants/{id}/menu-items                        | JWT  | List menu items               |
 | GET    | /restaurants/{id}/menu-items/{itemId}               | JWT  | Get menu item                 |
-| PUT    | /restaurants/{id}/menu-items/{itemId}               | JWT  | Update menu item              |
-| DELETE | /restaurants/{id}/menu-items/{itemId}               | JWT  | Delete menu item              |
-| GET    | /restaurants/{id}/orders                            | JWT  | All orders for a restaurant   |
-| PATCH  | /restaurants/{id}/orders/{orderId}/status           | JWT  | Update restaurant order status|
+| PUT    | /restaurants/{id}/menu-items/{itemId}               | JWT  | Update menu item (SUPER_ADMIN/RESTAURANT_ADMIN only) |
+| DELETE | /restaurants/{id}/menu-items/{itemId}               | JWT  | Delete menu item (SUPER_ADMIN/RESTAURANT_ADMIN only) |
+| GET    | /restaurants/{id}/orders                            | JWT  | All orders for a restaurant; restaurant staff only (SUPER_ADMIN/RESTAURANT_ADMIN/RESTAURANT_EMPLOYEE) |
+| PATCH  | /restaurants/{id}/orders/{orderId}/status           | JWT  | Update restaurant order status; restaurant staff only (SUPER_ADMIN/RESTAURANT_ADMIN/RESTAURANT_EMPLOYEE) |
+
+`RESTAURANT_EMPLOYEE` may only view and update the status of restaurant orders — it gets `403` on all
+restaurant/menu-item create/update/delete endpoints. Browsing restaurants and menu items (the `GET` endpoints
+above) stays open to every authenticated role. See `PROJECT_CONTEXT.md` → `restaurant-service` →
+"Authorization: RESTAURANT_EMPLOYEE role restrictions" for details.
 
 > **Known gap:** `RESTAURANT_ADMIN`/`RESTAURANT_EMPLOYEE` accounts aren't scoped to a specific restaurant yet — any
 > staff member with either role can act on any restaurant's data. Scoped out (not implemented) in
@@ -185,8 +190,39 @@ Open it locally, log in via the Auth tab to get a JWT, then explore every endpoi
 The scoped staff-creation requests exercise `AuthService.assertCanCreate`: a `RESTAURANT_ADMIN` may only create
 `RESTAURANT_EMPLOYEE` accounts, and a `DELIVERY_ADMIN` may only create `DELIVERY_DRIVER` accounts.
 
+It also has an `OrderService` folder that places a real order as the seeded customer Anna Müller and drives it
+end-to-end — order-service → restaurant-service (advancing the restaurant order through its state machine) →
+delivery-service — polling after each async step (Kafka via the outbox pattern) until the next service has
+caught up. This produces a genuinely fresh delivery every run.
+
+It also has a `DeliveryService` folder with subfolders:
+
+- **Delivery Admin** — login, full `DeliveryController` + `DriverController` coverage (get by id, get by order id,
+  list, status update, driver delete — each with a 404/409 negative case), logout (client-side)
+- **Delivery Driver** — login, gets its own deliveries (scoped server-side), 403 checks confirming a driver can't
+  read another driver's delivery or touch the `/drivers` roster, logout (client-side)
+
+...and a `RestaurantService` folder with subfolders:
+
+- **Restaurant Admin** — login, full create→read→update→delete cycle for both a restaurant and a menu item,
+  logout (client-side); exercises `RestaurantService.assertCallerIsAdmin` allowing `RESTAURANT_ADMIN`
+- **Restaurant Employee** — login, gets restaurant orders and updates a restaurant order's status (both allowed),
+  403 checks confirming an employee can't create/update/delete a restaurant or menu item, gets all restaurants
+  (browsing stays open), logout (client-side)
+- **Customer** — login, 403 check confirming a customer can't hit the restaurant-orders endpoint
+
+The `Restaurant Employee`/`Customer` 403 checks exercise `RestaurantOrderService.assertCallerManagesRestaurantOrders`
+and `RestaurantService.assertCallerIsAdmin` (both throw `InsufficientRoleException` → 403).
+
+The delivery-by-id/order-id/status-update requests need at least one existing delivery to act on. The `OrderService`
+folder's last request captures the delivery it just created into collection variables for them to use; if you skip
+that folder, "Delivery Admin Gets All Deliveries" falls back to capturing whatever it finds (e.g. the static fixture
+in `delivery-service/data.sql`), and the dependent requests fail fast with a clear error if nothing exists at all.
+
 Import it into Postman, set `superadminPassword` (and `baseUrl` if not using the gateway), then run the
-**Superadmin** folder first (it creates the other accounts), followed by the four role folders in any order.
+**Superadmin** folder first (it creates the other accounts), followed by **OrderService**, then the remaining
+folders in any order. This is also the order the folders are stored in, so a full "Run collection" works out of
+the box.
 
 ## Seed Data
 
@@ -197,8 +233,12 @@ The following accounts are pre-loaded and ready to use:
 | Anna Müller  | anna.mueller@example.com   | password123 |
 | Ben Schmidt  | ben.schmidt@example.com    | password123 |
 | Clara Weber  | clara.weber@example.com    | password123 |
+| Max Müller   | max.mueller@example.com    | password123 |
+| Lisa Schmidt | lisa.schmidt@example.com   | password123 |
+| Tom Wagner   | tom.wagner@example.com     | password123 |
 
-Three restaurants (Bella Italia, Burger Palace, Tokyo Garden) and three drivers are also pre-loaded.
+Three restaurants (Bella Italia, Burger Palace, Tokyo Garden) and three drivers (Max, Lisa, Tom — Max and Lisa can
+log in and act as `DELIVERY_DRIVER`) are also pre-loaded.
 
 ## Build Commands
 

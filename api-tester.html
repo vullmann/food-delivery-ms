@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Food Delivery – Superadmin API Tester</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            color: #222;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 16px 32px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: .8rem;
+            font-weight: 400;
+        }
+
+        #auth-status-text {
+            color: #a0a0c0;
+        }
+
+        .btn-secondary {
+            background: #3a3a55;
+            color: #fff;
+        }
+
+        .btn-secondary:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 20px 32px 0;
+        }
+
+        .tab-btn {
+            padding: 10px 28px;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            background: #d1d5db;
+            color: #555;
+            font-size: .95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            color: #1a1a2e;
+        }
+
+        .tab-content {
+            display: none;
+            background: #fff;
+            margin: 0 32px 32px;
+            border-radius: 0 8px 8px 8px;
+            padding: 28px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ── Sections ── */
+        .section {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section-header:hover {
+            background: #f0f2f5;
+        }
+
+        .method-badge {
+            font-size: .75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .badge-get {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-post {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-put {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        .badge-patch {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .badge-delete {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .section-title {
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .section-path {
+            font-size: .82rem;
+            color: #6b7280;
+            font-family: monospace;
+        }
+
+        .section-body {
+            padding: 16px;
+        }
+
+        /* ── Form ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: .8rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        input, select {
+            padding: 7px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: .875rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        input:focus, select:focus {
+            border-color: #6366f1;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: .875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s;
+        }
+
+        .btn:hover {
+            opacity: .85;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-seed {
+            background: #0ea5e9;
+            color: #fff;
+            font-size: .78rem;
+            padding: 5px 12px;
+        }
+
+        /* ── Response ── */
+        .response-box {
+            margin-top: 14px;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-family: monospace;
+            font-size: .82rem;
+            white-space: pre-wrap;
+            max-height: 260px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .response-box.visible {
+            display: block;
+        }
+
+        .status-ok {
+            color: #a6e3a1;
+        }
+
+        .status-err {
+            color: #f38ba8;
+        }
+
+        .chevron {
+            margin-left: auto;
+            transition: transform .2s;
+            font-size: .8rem;
+        }
+
+        .section.collapsed .chevron {
+            transform: rotate(-90deg);
+        }
+
+        .section.collapsed .section-body {
+            display: none;
+        }
+
+        .seed-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 10px 14px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            font-size: .85rem;
+        }
+
+        .seed-bar strong {
+            color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span>Food Delivery Service – Superadmin API Tester</span>
+    <span class="auth-status">
+        <span id="auth-status-text">Not logged in</span>
+        <button class="btn btn-secondary" id="btn-logout" onclick="authLogout()" disabled>Logout</button>
+    </span>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('auth')">Auth</button>
+    <button class="tab-btn" onclick="switchTab('customer')">Customer Service</button>
+    <button class="tab-btn" onclick="switchTab('restaurant')">Restaurant Service</button>
+    <button class="tab-btn" onclick="switchTab('order')">Order Service</button>
+    <button class="tab-btn" onclick="switchTab('delivery')">Delivery Service</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ AUTH ══ -->
+<div id="tab-auth" class="tab-content active">
+
+    <!-- Token bar -->
+    <div class="seed-bar" id="auth-token-bar" style="display:none;">
+        <strong>JWT Token:</strong>
+        <input id="auth-token-display" readonly style="flex:1;font-size:.75rem;font-family:monospace;color:#0369a1;"/>
+        <button class="btn btn-seed" onclick="copyToken()">Copy</button>
+        <span id="auth-userId-display" style="font-size:.78rem;color:#6b7280;"></span>
+    </div>
+
+    <!-- POST /auth/login -->
+    <div class="section" id="s-auth-login">
+        <div class="section-header" onclick="toggleSection('s-auth-login')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Login</span>
+            <span class="section-path">/auth/login</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Email</label><input id="auth-login-email"
+                                                                   value="veitullmann@gmx.de"/></div>
+                <div class="form-group"><label>Password</label><input id="auth-login-password" type="password"/>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="authLogin()">Send</button>
+            <div class="response-box" id="r-auth-login"></div>
+        </div>
+    </div>
+
+    <!-- POST /auth/register/staff -->
+    <div class="section" id="s-auth-staff">
+        <div class="section-header" onclick="toggleSection('s-auth-staff')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Register Staff (Restaurant / Delivery Admin)</span>
+            <span class="section-path">/auth/register/staff</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>First Name</label><input id="auth-staff-firstName"
+                                                                        value="Restaurant"/></div>
+                <div class="form-group"><label>Last Name</label><input id="auth-staff-lastName"
+                                                                       value="Admin"/></div>
+                <div class="form-group"><label>Email</label><input id="auth-staff-email"
+                                                                   value="restaurant.admin@example.com"/></div>
+                <div class="form-group"><label>Password</label><input id="auth-staff-password" type="password"
+                                                                      value="securepass123"/></div>
+                <div class="form-group"><label>Phone</label><input id="auth-staff-phone"
+                                                                   value="+491234567890"/></div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="auth-staff-role">
+                        <option value="RESTAURANT_ADMIN">RESTAURANT_ADMIN</option>
+                        <option value="DELIVERY_ADMIN">DELIVERY_ADMIN</option>
+                        <option value="RESTAURANT_EMPLOYEE">RESTAURANT_EMPLOYEE</option>
+                        <option value="DELIVERY_DRIVER">DELIVERY_DRIVER</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="registerStaff()">Send</button>
+            <div class="response-box" id="r-auth-staff"></div>
+        </div>
+    </div>
+
+    <!-- GET /auth/users -->
+    <div class="section" id="s-auth-users">
+        <div class="section-header" onclick="toggleSection('s-auth-users')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Users (SUPER_ADMIN only)</span>
+            <span class="section-path">/auth/users</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <button class="btn btn-primary" onclick="getAllUsers()">Send</button>
+            <div class="response-box" id="r-auth-users"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ CUSTOMER ══ -->
+<div id="tab-customer" class="tab-content">
+
+    <div class="seed-bar">
+        <strong>Seed IDs:</strong>
+        <button class="btn btn-seed" onclick="fillSeedCustomer('a1b2c3d4-0001-0001-0001-000000000001')">Anna</button>
+        <button class="btn btn-seed" onclick="fillSeedCustomer('a1b2c3d4-0002-0002-0002-000000000002')">Ben</button>
+        <button class="btn btn-seed" onclick="fillSeedCustomer('a1b2c3d4-0003-0003-0003-000000000003')">Clara</button>
+    </div>
+
+    <!-- POST /auth/register/customer -->
+    <div class="section" id="s-register-customer">
+        <div class="section-header" onclick="toggleSection('s-register-customer')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Register Customer</span>
+            <span class="section-path">/auth/register/customer</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>First Name</label><input id="rc-firstName" value="Jane"/></div>
+                <div class="form-group"><label>Last Name</label><input id="rc-lastName" value="Smith"/></div>
+                <div class="form-group"><label>Email</label><input id="rc-email" value="jane.smith@example.com"/></div>
+                <div class="form-group"><label>Password</label><input id="rc-password" type="password"
+                                                                      value="securepass123"/></div>
+                <div class="form-group"><label>Phone</label><input id="rc-phone" value="+4998765432"/></div>
+                <div class="form-group"><label>Street</label><input id="rc-street" value="Oak Ave"/></div>
+                <div class="form-group"><label>House Number</label><input id="rc-houseNumber" value="456"/></div>
+                <div class="form-group"><label>City</label><input id="rc-city" value="Munich"/></div>
+                <div class="form-group"><label>ZIP</label><input id="rc-zip" value="80331"/></div>
+                <div class="form-group"><label>Country</label><input id="rc-country" value="Germany"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="registerCustomer()">Send</button>
+            <div class="response-box" id="r-register-customer"></div>
+        </div>
+    </div>
+
+    <!-- GET /customers -->
+    <div class="section" id="s-get-all-customers">
+        <div class="section-header" onclick="toggleSection('s-get-all-customers')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Customers</span>
+            <span class="section-path">/customers</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <button class="btn btn-primary" onclick="getAllCustomers()">Send</button>
+            <div class="response-box" id="r-get-all-customers"></div>
+        </div>
+    </div>
+
+    <!-- GET /customers/{id} -->
+    <div class="section" id="s-get-customer">
+        <div class="section-header" onclick="toggleSection('s-get-customer')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Customer by ID</span>
+            <span class="section-path">/customers/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Customer ID</label><input id="c-getById-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getCustomerById()">Send</button>
+            <div class="response-box" id="r-get-customer"></div>
+        </div>
+    </div>
+
+    <!-- GET /customers?email= -->
+    <div class="section" id="s-get-customer-email">
+        <div class="section-header" onclick="toggleSection('s-get-customer-email')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Customer by Email</span>
+            <span class="section-path">/customers?email=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Email</label><input id="c-getByEmail-email"
+                                                                   placeholder="user@example.com"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getCustomerByEmail()">Send</button>
+            <div class="response-box" id="r-get-customer-email"></div>
+        </div>
+    </div>
+
+    <!-- PUT /customers/{id} -->
+    <div class="section" id="s-update-customer">
+        <div class="section-header" onclick="toggleSection('s-update-customer')">
+            <span class="method-badge badge-put">PUT</span>
+            <span class="section-title">Update Customer</span>
+            <span class="section-path">/customers/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Customer ID</label><input id="c-update-id" placeholder="UUID"/></div>
+                <div class="form-group"><label>First Name</label><input id="c-update-firstName" value="Janet"/></div>
+                <div class="form-group"><label>Last Name</label><input id="c-update-lastName" value="Smith"/></div>
+                <div class="form-group"><label>Phone</label><input id="c-update-phone" value="+4911111111"/></div>
+                <div class="form-group"><label>Street</label><input id="c-update-street" value="Oak Ave"/></div>
+                <div class="form-group"><label>House Number</label><input id="c-update-houseNumber" value="456"/></div>
+                <div class="form-group"><label>City</label><input id="c-update-city" value="Munich"/></div>
+                <div class="form-group"><label>ZIP</label><input id="c-update-zip" value="80331"/></div>
+                <div class="form-group"><label>Country</label><input id="c-update-country" value="Germany"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="updateCustomer()">Send</button>
+            <div class="response-box" id="r-update-customer"></div>
+        </div>
+    </div>
+
+    <!-- DELETE /customers/{id} -->
+    <div class="section" id="s-delete-customer">
+        <div class="section-header" onclick="toggleSection('s-delete-customer')">
+            <span class="method-badge badge-delete">DELETE</span>
+            <span class="section-title">Delete Customer</span>
+            <span class="section-path">/customers/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Customer ID</label><input id="c-delete-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteCustomer()">Send</button>
+            <div class="response-box" id="r-delete-customer"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ RESTAURANT ══ -->
+<div id="tab-restaurant" class="tab-content">
+
+    <div class="seed-bar">
+        <strong>Seed IDs:</strong>
+        <button class="btn btn-seed" onclick="fillSeedRestaurant('b1c2d3e4-0001-0001-0001-000000000001')">Bella Italia
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedRestaurant('b1c2d3e4-0002-0002-0002-000000000002')">Burger
+            Palace
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedRestaurant('b1c2d3e4-0003-0003-0003-000000000003')">Tokyo Garden
+        </button>
+    </div>
+
+    <!-- POST /restaurants -->
+    <div class="section" id="s-create-restaurant">
+        <div class="section-header" onclick="toggleSection('s-create-restaurant')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Create Restaurant</span>
+            <span class="section-path">/restaurants</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Name</label><input id="r-name" value="Pizza Roma"/></div>
+                <div class="form-group"><label>Description</label><input id="r-description"
+                                                                         value="Neapolitan pizza made with love"/></div>
+                <div class="form-group"><label>Phone</label><input id="r-phone" value="+49 30 99887766"/></div>
+                <div class="form-group"><label>Email</label><input id="r-email" value="info@pizza-roma.de"/></div>
+                <div class="form-group">
+                    <label>Cuisine Type</label>
+                    <select id="r-cuisineType">
+                        <option>ITALIAN</option>
+                        <option selected>PIZZA</option>
+                        <option>BURGER</option>
+                        <option>ASIAN</option>
+                        <option>MEXICAN</option>
+                        <option>INDIAN</option>
+                        <option>GREEK</option>
+                        <option>AMERICAN</option>
+                        <option>SUSHI</option>
+                        <option>OTHER</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Is Open</label>
+                    <select id="r-isOpen">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Street</label><input id="r-street" value="Kurfürstendamm"/></div>
+                <div class="form-group"><label>House Number</label><input id="r-houseNumber" value="21"/></div>
+                <div class="form-group"><label>City</label><input id="r-city" value="Berlin"/></div>
+                <div class="form-group"><label>ZIP</label><input id="r-zip" value="10719"/></div>
+                <div class="form-group"><label>Country</label><input id="r-country" value="Germany"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="createRestaurant()">Send</button>
+            <div class="response-box" id="r-create-restaurant"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants/{id} -->
+    <div class="section" id="s-get-restaurant">
+        <div class="section-header" onclick="toggleSection('s-get-restaurant')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Restaurant by ID</span>
+            <span class="section-path">/restaurants/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="r-getById-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getRestaurantById()">Send</button>
+            <div class="response-box" id="r-get-restaurant"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants -->
+    <div class="section" id="s-get-all-restaurants">
+        <div class="section-header" onclick="toggleSection('s-get-all-restaurants')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Restaurants</span>
+            <span class="section-path">/restaurants</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <button class="btn btn-primary" onclick="getAllRestaurants()">Send</button>
+            <div class="response-box" id="r-get-all-restaurants"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants?cuisineType= -->
+    <div class="section" id="s-get-restaurant-cuisine">
+        <div class="section-header" onclick="toggleSection('s-get-restaurant-cuisine')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Filter by Cuisine Type</span>
+            <span class="section-path">/restaurants?cuisineType=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Cuisine Type</label>
+                    <select id="r-filter-cuisineType">
+                        <option>ITALIAN</option>
+                        <option>PIZZA</option>
+                        <option>BURGER</option>
+                        <option>ASIAN</option>
+                        <option>MEXICAN</option>
+                        <option>INDIAN</option>
+                        <option>GREEK</option>
+                        <option>AMERICAN</option>
+                        <option>SUSHI</option>
+                        <option>OTHER</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="filterByCuisine()">Send</button>
+            <div class="response-box" id="r-get-restaurant-cuisine"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants?isOpen= -->
+    <div class="section" id="s-get-restaurant-open">
+        <div class="section-header" onclick="toggleSection('s-get-restaurant-open')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Filter by Open Status</span>
+            <span class="section-path">/restaurants?isOpen=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Is Open</label>
+                    <select id="r-filter-isOpen">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="filterByOpen()">Send</button>
+            <div class="response-box" id="r-get-restaurant-open"></div>
+        </div>
+    </div>
+
+    <!-- PUT /restaurants/{id} -->
+    <div class="section" id="s-update-restaurant">
+        <div class="section-header" onclick="toggleSection('s-update-restaurant')">
+            <span class="method-badge badge-put">PUT</span>
+            <span class="section-title">Update Restaurant</span>
+            <span class="section-path">/restaurants/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="r-update-id" placeholder="UUID"/></div>
+                <div class="form-group"><label>Name</label><input id="r-update-name" value="Pizza Roma Deluxe"/></div>
+                <div class="form-group"><label>Description</label><input id="r-update-description"
+                                                                         value="Neapolitan pizza made with love"/></div>
+                <div class="form-group"><label>Phone</label><input id="r-update-phone" value="+49 30 99887766"/></div>
+                <div class="form-group"><label>Email</label><input id="r-update-email" value="info@pizza-roma.de"/>
+                </div>
+                <div class="form-group">
+                    <label>Cuisine Type</label>
+                    <select id="r-update-cuisineType">
+                        <option>ITALIAN</option>
+                        <option selected>PIZZA</option>
+                        <option>BURGER</option>
+                        <option>ASIAN</option>
+                        <option>MEXICAN</option>
+                        <option>INDIAN</option>
+                        <option>GREEK</option>
+                        <option>AMERICAN</option>
+                        <option>SUSHI</option>
+                        <option>OTHER</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Is Open</label>
+                    <select id="r-update-isOpen">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Street</label><input id="r-update-street" value="Kurfürstendamm"/></div>
+                <div class="form-group"><label>House Number</label><input id="r-update-houseNumber" value="21"/></div>
+                <div class="form-group"><label>City</label><input id="r-update-city" value="Berlin"/></div>
+                <div class="form-group"><label>ZIP</label><input id="r-update-zip" value="10719"/></div>
+                <div class="form-group"><label>Country</label><input id="r-update-country" value="Germany"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="updateRestaurant()">Send</button>
+            <div class="response-box" id="r-update-restaurant"></div>
+        </div>
+    </div>
+
+    <!-- DELETE /restaurants/{id} -->
+    <div class="section" id="s-delete-restaurant">
+        <div class="section-header" onclick="toggleSection('s-delete-restaurant')">
+            <span class="method-badge badge-delete">DELETE</span>
+            <span class="section-title">Delete Restaurant</span>
+            <span class="section-path">/restaurants/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="r-delete-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteRestaurant()">Send</button>
+            <div class="response-box" id="r-delete-restaurant"></div>
+        </div>
+    </div>
+
+    <!-- POST /restaurants/{id}/menu-items -->
+    <div class="section" id="s-create-menuitem">
+        <div class="section-header" onclick="toggleSection('s-create-menuitem')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Create Menu Item</span>
+            <span class="section-path">/restaurants/{id}/menu-items</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="mi-create-restaurantId"
+                                                                           placeholder="UUID"/></div>
+                <div class="form-group"><label>Name</label><input id="mi-name" value="Margherita"/></div>
+                <div class="form-group"><label>Description</label><input id="mi-description"
+                                                                         value="Tomato, mozzarella, fresh basil"/></div>
+                <div class="form-group"><label>Price</label><input id="mi-price" type="number" step="0.01"
+                                                                   value="10.50"/></div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="mi-category">
+                        <option>STARTER</option>
+                        <option selected>MAIN</option>
+                        <option>DESSERT</option>
+                        <option>DRINK</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Available</label>
+                    <select id="mi-available">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="createMenuItem()">Send</button>
+            <div class="response-box" id="r-create-menuitem"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants/{id}/menu-items -->
+    <div class="section" id="s-get-menuitems">
+        <div class="section-header" onclick="toggleSection('s-get-menuitems')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Menu Items</span>
+            <span class="section-path">/restaurants/{id}/menu-items</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="mi-getAll-restaurantId"
+                                                                           placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getMenuItems()">Send</button>
+            <div class="response-box" id="r-get-menuitems"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants/{id}/menu-items/{itemId} -->
+    <div class="section" id="s-get-menuitem">
+        <div class="section-header" onclick="toggleSection('s-get-menuitem')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Single Menu Item</span>
+            <span class="section-path">/restaurants/{id}/menu-items/{itemId}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="mi-getOne-restaurantId"
+                                                                           placeholder="UUID"/></div>
+                <div class="form-group"><label>Menu Item ID</label><input id="mi-getOne-itemId" placeholder="UUID"/>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="getMenuItem()">Send</button>
+            <div class="response-box" id="r-get-menuitem"></div>
+        </div>
+    </div>
+
+    <!-- PUT /restaurants/{id}/menu-items/{itemId} -->
+    <div class="section" id="s-update-menuitem">
+        <div class="section-header" onclick="toggleSection('s-update-menuitem')">
+            <span class="method-badge badge-put">PUT</span>
+            <span class="section-title">Update Menu Item</span>
+            <span class="section-path">/restaurants/{id}/menu-items/{itemId}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="mi-update-restaurantId"
+                                                                           placeholder="UUID"/></div>
+                <div class="form-group"><label>Menu Item ID</label><input id="mi-update-itemId" placeholder="UUID"/>
+                </div>
+                <div class="form-group"><label>Name</label><input id="mi-update-name" value="Margherita Extra"/></div>
+                <div class="form-group"><label>Description</label><input id="mi-update-description"
+                                                                         value="Tomato, double mozzarella, fresh basil"/>
+                </div>
+                <div class="form-group"><label>Price</label><input id="mi-update-price" type="number" step="0.01"
+                                                                   value="12.00"/></div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="mi-update-category">
+                        <option>STARTER</option>
+                        <option selected>MAIN</option>
+                        <option>DESSERT</option>
+                        <option>DRINK</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Available</label>
+                    <select id="mi-update-available">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateMenuItem()">Send</button>
+            <div class="response-box" id="r-update-menuitem"></div>
+        </div>
+    </div>
+
+    <!-- DELETE /restaurants/{id}/menu-items/{itemId} -->
+    <div class="section" id="s-delete-menuitem">
+        <div class="section-header" onclick="toggleSection('s-delete-menuitem')">
+            <span class="method-badge badge-delete">DELETE</span>
+            <span class="section-title">Delete Menu Item</span>
+            <span class="section-path">/restaurants/{id}/menu-items/{itemId}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="mi-delete-restaurantId"
+                                                                           placeholder="UUID"/></div>
+                <div class="form-group"><label>Menu Item ID</label><input id="mi-delete-itemId" placeholder="UUID"/>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteMenuItem()">Send</button>
+            <div class="response-box" id="r-delete-menuitem"></div>
+        </div>
+    </div>
+
+    <!-- GET /restaurants/{restaurantId}/orders -->
+    <div class="section" id="s-get-restaurant-orders">
+        <div class="section-header" onclick="toggleSection('s-get-restaurant-orders')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Restaurant Orders</span>
+            <span class="section-path">/restaurants/{restaurantId}/orders</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="ro-getAll-restaurantId"
+                                                                           placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getRestaurantOrders()">Send</button>
+            <div class="response-box" id="r-get-restaurant-orders"></div>
+        </div>
+    </div>
+
+    <!-- PATCH /restaurants/{restaurantId}/orders/{restaurantOrderId}/status -->
+    <div class="section" id="s-update-restaurant-order-status">
+        <div class="section-header" onclick="toggleSection('s-update-restaurant-order-status')">
+            <span class="method-badge badge-patch">PATCH</span>
+            <span class="section-title">Update Restaurant Order Status</span>
+            <span class="section-path">/restaurants/{restaurantId}/orders/{restaurantOrderId}/status</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Restaurant ID</label><input id="ro-updateStatus-restaurantId"
+                                                                           placeholder="UUID"/></div>
+                <div class="form-group"><label>Restaurant Order ID</label><input id="ro-updateStatus-orderId"
+                                                                                 placeholder="UUID"/></div>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="ro-updateStatus-status">
+                        <option>RECEIVED</option>
+                        <option>CONFIRMED</option>
+                        <option>PREPARING</option>
+                        <option>READY_FOR_DELIVERY</option>
+                        <option>PICKED_UP</option>
+                        <option>CANCELLED</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateRestaurantOrderStatus()">Send</button>
+            <div class="response-box" id="r-update-restaurant-order-status"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ ORDER ══ -->
+<div id="tab-order" class="tab-content">
+
+    <div class="seed-bar">
+        <strong>Customer seeds:</strong>
+        <button class="btn btn-seed" onclick="fillSeedOrderCustomer('a1b2c3d4-0001-0001-0001-000000000001')">Anna
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedOrderCustomer('a1b2c3d4-0002-0002-0002-000000000002')">Ben
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedOrderCustomer('a1b2c3d4-0003-0003-0003-000000000003')">Clara
+        </button>
+        &nbsp;|&nbsp;
+        <strong>Restaurant seeds:</strong>
+        <button class="btn btn-seed" onclick="fillSeedOrderRestaurant('b1c2d3e4-0001-0001-0001-000000000001')">Bella
+            Italia
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedOrderRestaurant('b1c2d3e4-0002-0002-0002-000000000002')">Burger
+            Palace
+        </button>
+        <button class="btn btn-seed" onclick="fillSeedOrderRestaurant('b1c2d3e4-0003-0003-0003-000000000003')">Tokyo
+            Garden
+        </button>
+        &nbsp;|&nbsp;
+        <strong>Menu item seeds:</strong>
+        <button class="btn btn-seed"
+                onclick="fillSeedOrderMenuItem('c1d2e3f4-0102-0102-0102-000000000002','Spaghetti Carbonara','Classic carbonara with guanciale and pecorino',13.90)">
+            Carbonara
+        </button>
+        <button class="btn btn-seed"
+                onclick="fillSeedOrderMenuItem('c1d2e3f4-0202-0202-0202-000000000006','Classic Cheeseburger','Double patty, cheddar, pickles, house sauce',12.50)">
+            Cheeseburger
+        </button>
+        <button class="btn btn-seed"
+                onclick="fillSeedOrderMenuItem('c1d2e3f4-0302-0302-0302-000000000010','Salmon Nigiri (2x)','Fresh Atlantic salmon on seasoned rice',8.50)">
+            Salmon Nigiri
+        </button>
+    </div>
+
+    <!-- POST /orders -->
+    <div class="section" id="s-place-order">
+        <div class="section-header" onclick="toggleSection('s-place-order')">
+            <span class="method-badge badge-post">POST</span>
+            <span class="section-title">Place Order</span>
+            <span class="section-path">/orders</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Customer ID</label><input id="o-customerId" placeholder="UUID"/></div>
+                <div class="form-group"><label>Restaurant ID</label><input id="o-restaurantId" placeholder="UUID"/>
+                </div>
+                <div class="form-group"><label>Street</label><input id="o-street" value="Hauptstraße"/></div>
+                <div class="form-group"><label>House Number</label><input id="o-houseNumber" value="1"/></div>
+                <div class="form-group"><label>City</label><input id="o-city" value="Berlin"/></div>
+                <div class="form-group"><label>ZIP</label><input id="o-zip" value="10115"/></div>
+                <div class="form-group"><label>Country</label><input id="o-country" value="Germany"/></div>
+            </div>
+            <div style="margin-bottom:10px;font-size:.82rem;font-weight:600;color:#374151;">Item</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Menu Item ID</label><input id="o-item-menuItemId" placeholder="UUID"/>
+                </div>
+                <div class="form-group"><label>Name</label><input id="o-item-name" value="Margherita"/></div>
+                <div class="form-group"><label>Description</label><input id="o-item-description"
+                                                                         value="Classic tomato and mozzarella"/></div>
+                <div class="form-group"><label>Quantity</label><input id="o-item-quantity" type="number" min="1"
+                                                                      value="1"/></div>
+                <div class="form-group"><label>Price</label><input id="o-item-price" type="number" step="0.01"
+                                                                   value="10.50"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="placeOrder()">Send</button>
+            <div class="response-box" id="r-place-order"></div>
+        </div>
+    </div>
+
+    <!-- GET /orders/{id} -->
+    <div class="section" id="s-get-order">
+        <div class="section-header" onclick="toggleSection('s-get-order')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Order by ID</span>
+            <span class="section-path">/orders/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Order ID</label><input id="o-getById-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getOrderById()">Send</button>
+            <div class="response-box" id="r-get-order"></div>
+        </div>
+    </div>
+
+    <!-- GET /orders/customer/{customerId} -->
+    <div class="section" id="s-get-orders-customer">
+        <div class="section-header" onclick="toggleSection('s-get-orders-customer')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Orders by Customer</span>
+            <span class="section-path">/orders/customer/{customerId}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Customer ID</label><input id="o-getByCustomer-customerId"
+                                                                         placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getOrdersByCustomer()">Send</button>
+            <div class="response-box" id="r-get-orders-customer"></div>
+        </div>
+    </div>
+
+    <!-- PATCH /orders/{id}/status -->
+    <div class="section" id="s-update-order-status">
+        <div class="section-header" onclick="toggleSection('s-update-order-status')">
+            <span class="method-badge badge-patch">PATCH</span>
+            <span class="section-title">Update Order Status</span>
+            <span class="section-path">/orders/{id}/status</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Order ID</label><input id="o-updateStatus-id" placeholder="UUID"/></div>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="o-updateStatus-status">
+                        <option>PENDING</option>
+                        <option>CONFIRMED</option>
+                        <option>PREPARING</option>
+                        <option>READY_FOR_DELIVERY</option>
+                        <option>DRIVER_ASSIGNED</option>
+                        <option>ON_THE_WAY</option>
+                        <option>DELIVERED</option>
+                        <option>CANCELLED</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateOrderStatus()">Send</button>
+            <div class="response-box" id="r-update-order-status"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ DELIVERY ══ -->
+<div id="tab-delivery" class="tab-content">
+
+    <!-- GET /deliveries/{id} -->
+    <div class="section" id="s-get-delivery">
+        <div class="section-header" onclick="toggleSection('s-get-delivery')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Delivery by ID</span>
+            <span class="section-path">/deliveries/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Delivery ID</label><input id="d-getById-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getDeliveryById()">Send</button>
+            <div class="response-box" id="r-get-delivery"></div>
+        </div>
+    </div>
+
+    <!-- GET /deliveries?orderId= -->
+    <div class="section" id="s-get-delivery-by-order">
+        <div class="section-header" onclick="toggleSection('s-get-delivery-by-order')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Delivery by Order ID</span>
+            <span class="section-path">/deliveries?orderId=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Order ID</label><input id="d-getByOrder-orderId" placeholder="UUID"/>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="getDeliveryByOrderId()">Send</button>
+            <div class="response-box" id="r-get-delivery-by-order"></div>
+        </div>
+    </div>
+
+    <!-- GET /deliveries -->
+    <div class="section" id="s-get-all-deliveries">
+        <div class="section-header" onclick="toggleSection('s-get-all-deliveries')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Deliveries</span>
+            <span class="section-path">/deliveries</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <p style="font-size:.85rem;color:#6b7280;margin:0 0 12px;">As DELIVERY_DRIVER this returns only your own assigned deliveries; other roles see all.</p>
+            <button class="btn btn-primary" onclick="getAllDeliveries()">Send</button>
+            <div class="response-box" id="r-get-all-deliveries"></div>
+        </div>
+    </div>
+
+    <!-- GET /deliveries?status= -->
+    <div class="section" id="s-get-deliveries-by-status">
+        <div class="section-header" onclick="toggleSection('s-get-deliveries-by-status')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Filter Deliveries by Status</span>
+            <span class="section-path">/deliveries?status=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="d-filter-status">
+                        <option>PENDING</option>
+                        <option>DRIVER_ASSIGNED</option>
+                        <option>PICKED_UP</option>
+                        <option>DELIVERED</option>
+                        <option>CANCELLED</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="filterDeliveriesByStatus()">Send</button>
+            <div class="response-box" id="r-get-deliveries-by-status"></div>
+        </div>
+    </div>
+
+    <!-- PATCH /deliveries/{id}/status -->
+    <div class="section" id="s-update-delivery-status">
+        <div class="section-header" onclick="toggleSection('s-update-delivery-status')">
+            <span class="method-badge badge-patch">PATCH</span>
+            <span class="section-title">Update Delivery Status</span>
+            <span class="section-path">/deliveries/{id}/status</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Delivery ID</label><input id="d-updateStatus-id" placeholder="UUID"/>
+                </div>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="d-updateStatus-status">
+                        <option>DRIVER_ASSIGNED</option>
+                        <option>PICKED_UP</option>
+                        <option>DELIVERED</option>
+                        <option>CANCELLED</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateDeliveryStatus()">Send</button>
+            <div class="response-box" id="r-update-delivery-status"></div>
+        </div>
+    </div>
+
+    <hr style="border:none;border-top:2px solid #e5e7eb;margin:24px 0;"/>
+    <div style="font-size:.95rem;font-weight:700;color:#1a1a2e;margin-bottom:16px;">Drivers</div>
+
+    <!-- GET /drivers/{id} -->
+    <div class="section" id="s-get-driver">
+        <div class="section-header" onclick="toggleSection('s-get-driver')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get Driver by ID</span>
+            <span class="section-path">/drivers/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Driver ID</label><input id="drv-getById-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-primary" onclick="getDriverById()">Send</button>
+            <div class="response-box" id="r-get-driver"></div>
+        </div>
+    </div>
+
+    <!-- GET /drivers -->
+    <div class="section" id="s-get-all-drivers">
+        <div class="section-header" onclick="toggleSection('s-get-all-drivers')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Get All Drivers</span>
+            <span class="section-path">/drivers</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <button class="btn btn-primary" onclick="getAllDrivers()">Send</button>
+            <div class="response-box" id="r-get-all-drivers"></div>
+        </div>
+    </div>
+
+    <!-- GET /drivers?status= -->
+    <div class="section" id="s-get-drivers-by-status">
+        <div class="section-header" onclick="toggleSection('s-get-drivers-by-status')">
+            <span class="method-badge badge-get">GET</span>
+            <span class="section-title">Filter Drivers by Status</span>
+            <span class="section-path">/drivers?status=</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="drv-filter-status">
+                        <option>AVAILABLE</option>
+                        <option>BUSY</option>
+                        <option>OFFLINE</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="filterDriversByStatus()">Send</button>
+            <div class="response-box" id="r-get-drivers-by-status"></div>
+        </div>
+    </div>
+
+    <!-- PATCH /drivers/{id}/status -->
+    <div class="section" id="s-update-driver-status">
+        <div class="section-header" onclick="toggleSection('s-update-driver-status')">
+            <span class="method-badge badge-patch">PATCH</span>
+            <span class="section-title">Update Driver Status</span>
+            <span class="section-path">/drivers/{id}/status</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Driver ID</label><input id="drv-updateStatus-id" placeholder="UUID"/>
+                </div>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="drv-updateStatus-status">
+                        <option>AVAILABLE</option>
+                        <option>BUSY</option>
+                        <option>OFFLINE</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateDriverStatus()">Send</button>
+            <div class="response-box" id="r-update-driver-status"></div>
+        </div>
+    </div>
+
+    <!-- DELETE /drivers/{id} -->
+    <div class="section" id="s-delete-driver">
+        <div class="section-header" onclick="toggleSection('s-delete-driver')">
+            <span class="method-badge badge-delete">DELETE</span>
+            <span class="section-title">Delete Driver</span>
+            <span class="section-path">/drivers/{id}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="section-body">
+            <div class="form-grid">
+                <div class="form-group"><label>Driver ID</label><input id="drv-delete-id" placeholder="UUID"/></div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteDriver()">Send</button>
+            <div class="response-box" id="r-delete-driver"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const GATEWAY_URL = 'http://localhost:8088';
+
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    function switchTab(name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // ── Section collapse ───────────────────────────────────────────────────────
+    function toggleSection(id) {
+        document.getElementById(id).classList.toggle('collapsed');
+    }
+
+    // ── Response display ───────────────────────────────────────────────────────
+    function v(id) {
+        return document.getElementById(id).value.trim();
+    }
+
+    function showResponse(boxId, status, body) {
+        const box = document.getElementById(boxId);
+        const ok = status >= 200 && status < 300;
+        const statusClass = ok ? 'status-ok' : 'status-err';
+        const formatted = typeof body === 'object' ? JSON.stringify(body, null, 2) : body;
+        box.innerHTML = `<span class="${statusClass}">HTTP ${status}</span>\n\n${formatted}`;
+        box.classList.add('visible');
+    }
+
+    async function request(method, url, body, boxId) {
+        try {
+            const headers = {'Content-Type': 'application/json'};
+            const token = localStorage.getItem('auth-token');
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const opts = {method, headers};
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            const text = await res.text();
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+            } catch {
+                parsed = text || '(empty)';
+            }
+            showResponse(boxId, res.status, parsed);
+            return parsed;
+        } catch (e) {
+            showResponse(boxId, 0, 'Network error: ' + e.message);
+        }
+    }
+
+    // ── Seed helpers ───────────────────────────────────────────────────────────
+    function fillSeedCustomer(id) {
+        ['c-getById-id', 'c-update-id', 'c-delete-id'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.value = id;
+        });
+    }
+
+    function fillSeedRestaurant(id) {
+        ['r-getById-id', 'r-update-id', 'r-delete-id',
+            'mi-create-restaurantId', 'mi-getAll-restaurantId',
+            'mi-getOne-restaurantId', 'mi-update-restaurantId', 'mi-delete-restaurantId',
+            'ro-getAll-restaurantId', 'ro-updateStatus-restaurantId'
+        ].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.value = id;
+        });
+    }
+
+    // ── Customer API ───────────────────────────────────────────────────────────
+    async function registerCustomer() {
+        const data = await request('POST', `${GATEWAY_URL}/auth/register/customer`, {
+            firstName: v('rc-firstName'), lastName: v('rc-lastName'),
+            email: v('rc-email'), password: v('rc-password'), phone: v('rc-phone'),
+            address: {
+                street: v('rc-street'), houseNumber: v('rc-houseNumber'),
+                city: v('rc-city'), zip: v('rc-zip'), country: v('rc-country')
+            }
+        }, 'r-register-customer');
+        // Customer profile creation is async (UserRegisteredEvent -> customer-service),
+        // so GET /customers/{id} right after this may briefly 404.
+        if (data?.userId) fillSeedCustomer(data.userId);
+    }
+
+    function getAllCustomers() {
+        request('GET', `${GATEWAY_URL}/customers`, null, 'r-get-all-customers');
+    }
+
+    function getCustomerById() {
+        request('GET', `${GATEWAY_URL}/customers/${v('c-getById-id')}`, null, 'r-get-customer');
+    }
+
+    function getCustomerByEmail() {
+        request('GET', `${GATEWAY_URL}/customers?email=${encodeURIComponent(v('c-getByEmail-email'))}`, null, 'r-get-customer-email');
+    }
+
+    function updateCustomer() {
+        request('PUT', `${GATEWAY_URL}/customers/${v('c-update-id')}`, {
+            firstName: v('c-update-firstName'), lastName: v('c-update-lastName'),
+            phone: v('c-update-phone'),
+            address: {
+                street: v('c-update-street'), houseNumber: v('c-update-houseNumber'),
+                city: v('c-update-city'), zip: v('c-update-zip'), country: v('c-update-country')
+            }
+        }, 'r-update-customer');
+    }
+
+    function deleteCustomer() {
+        request('DELETE', `${GATEWAY_URL}/customers/${v('c-delete-id')}`, null, 'r-delete-customer');
+    }
+
+    // ── Restaurant API ─────────────────────────────────────────────────────────
+    function restaurantBody(prefix) {
+        return {
+            name: v(`${prefix}name`), description: v(`${prefix}description`),
+            phone: v(`${prefix}phone`), email: v(`${prefix}email`),
+            cuisineType: v(`${prefix}cuisineType`),
+            isOpen: v(`${prefix}isOpen`) === 'true',
+            address: {
+                street: v(`${prefix}street`), houseNumber: v(`${prefix}houseNumber`),
+                city: v(`${prefix}city`), zip: v(`${prefix}zip`), country: v(`${prefix}country`)
+            }
+        };
+    }
+
+    async function createRestaurant() {
+        const data = await request('POST', `${GATEWAY_URL}/restaurants`, restaurantBody('r-'), 'r-create-restaurant');
+        if (data?.id) fillSeedRestaurant(data.id);
+    }
+
+    function getRestaurantById() {
+        request('GET', `${GATEWAY_URL}/restaurants/${v('r-getById-id')}`, null, 'r-get-restaurant');
+    }
+
+    function getAllRestaurants() {
+        request('GET', `${GATEWAY_URL}/restaurants`, null, 'r-get-all-restaurants');
+    }
+
+    function filterByCuisine() {
+        request('GET', `${GATEWAY_URL}/restaurants?cuisineType=${v('r-filter-cuisineType')}`, null, 'r-get-restaurant-cuisine');
+    }
+
+    function filterByOpen() {
+        request('GET', `${GATEWAY_URL}/restaurants?isOpen=${v('r-filter-isOpen')}`, null, 'r-get-restaurant-open');
+    }
+
+    function updateRestaurant() {
+        request('PUT', `${GATEWAY_URL}/restaurants/${v('r-update-id')}`, restaurantBody('r-update-'), 'r-update-restaurant');
+    }
+
+    function deleteRestaurant() {
+        request('DELETE', `${GATEWAY_URL}/restaurants/${v('r-delete-id')}`, null, 'r-delete-restaurant');
+    }
+
+    async function createMenuItem() {
+        const rId = v('mi-create-restaurantId');
+        const data = await request('POST', `${GATEWAY_URL}/restaurants/${rId}/menu-items`, {
+            name: v('mi-name'), description: v('mi-description'),
+            price: parseFloat(v('mi-price')), category: v('mi-category'),
+            available: v('mi-available') === 'true'
+        }, 'r-create-menuitem');
+        if (data?.id) {
+            ['mi-getOne-itemId', 'mi-update-itemId', 'mi-delete-itemId'].forEach(f => {
+                document.getElementById(f).value = data.id;
+            });
+        }
+    }
+
+    function getMenuItems() {
+        const rId = v('mi-getAll-restaurantId');
+        request('GET', `${GATEWAY_URL}/restaurants/${rId}/menu-items`, null, 'r-get-menuitems');
+    }
+
+    function getMenuItem() {
+        const rId = v('mi-getOne-restaurantId');
+        const iId = v('mi-getOne-itemId');
+        request('GET', `${GATEWAY_URL}/restaurants/${rId}/menu-items/${iId}`, null, 'r-get-menuitem');
+    }
+
+    function updateMenuItem() {
+        const rId = v('mi-update-restaurantId');
+        const iId = v('mi-update-itemId');
+        request('PUT', `${GATEWAY_URL}/restaurants/${rId}/menu-items/${iId}`, {
+            name: v('mi-update-name'), description: v('mi-update-description'),
+            price: parseFloat(v('mi-update-price')), category: v('mi-update-category'),
+            available: v('mi-update-available') === 'true'
+        }, 'r-update-menuitem');
+    }
+
+    function deleteMenuItem() {
+        const rId = v('mi-delete-restaurantId');
+        const iId = v('mi-delete-itemId');
+        request('DELETE', `${GATEWAY_URL}/restaurants/${rId}/menu-items/${iId}`, null, 'r-delete-menuitem');
+    }
+
+    async function getRestaurantOrders() {
+        const rId = v('ro-getAll-restaurantId');
+        const data = await request('GET', `${GATEWAY_URL}/restaurants/${rId}/orders`, null, 'r-get-restaurant-orders');
+        if (Array.isArray(data) && data[0]?.id) {
+            document.getElementById('ro-updateStatus-orderId').value = data[0].id;
+        }
+    }
+
+    function updateRestaurantOrderStatus() {
+        const rId = v('ro-updateStatus-restaurantId');
+        const oId = v('ro-updateStatus-orderId');
+        const status = v('ro-updateStatus-status');
+        request('PATCH', `${GATEWAY_URL}/restaurants/${rId}/orders/${oId}/status?status=${status}`, null, 'r-update-restaurant-order-status');
+    }
+
+    // ── Order API ──────────────────────────────────────────────────────────────
+    function fillSeedOrderCustomer(id) {
+        ['o-customerId', 'o-getByCustomer-customerId'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.value = id;
+        });
+    }
+
+    function fillSeedOrderRestaurant(id) {
+        const el = document.getElementById('o-restaurantId');
+        if (el) el.value = id;
+    }
+
+    function fillSeedOrderMenuItem(id, name, description, price) {
+        const fields = {
+            'o-item-menuItemId': id,
+            'o-item-name': name,
+            'o-item-description': description,
+            'o-item-price': price
+        };
+        Object.entries(fields).forEach(([f, val]) => {
+            const el = document.getElementById(f);
+            if (el) el.value = val;
+        });
+    }
+
+    function fillSeedOrder(id) {
+        ['o-getById-id', 'o-updateStatus-id', 'd-getByOrder-orderId'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.value = id;
+        });
+    }
+
+    async function placeOrder() {
+        const data = await request('POST', `${GATEWAY_URL}/orders`, {
+            customerId: v('o-customerId'),
+            restaurantId: v('o-restaurantId'),
+            deliveryAddress: {
+                street: v('o-street'), houseNumber: v('o-houseNumber'),
+                city: v('o-city'), zip: v('o-zip'),
+                country: v('o-country')
+            },
+            items: [{
+                menuItemId: v('o-item-menuItemId'),
+                name: v('o-item-name'),
+                description: v('o-item-description'),
+                quantity: parseInt(v('o-item-quantity'), 10),
+                price: parseFloat(v('o-item-price'))
+            }]
+        }, 'r-place-order');
+        if (data?.id) fillSeedOrder(data.id);
+    }
+
+    function getOrderById() {
+        request('GET', `${GATEWAY_URL}/orders/${v('o-getById-id')}`, null, 'r-get-order');
+    }
+
+    function getOrdersByCustomer() {
+        request('GET', `${GATEWAY_URL}/orders/customer/${v('o-getByCustomer-customerId')}`, null, 'r-get-orders-customer');
+    }
+
+    function updateOrderStatus() {
+        const id = v('o-updateStatus-id');
+        const status = v('o-updateStatus-status');
+        request('PATCH', `${GATEWAY_URL}/orders/${id}/status?status=${status}`, null, 'r-update-order-status');
+    }
+
+    // ── Delivery API ───────────────────────────────────────────────────────────
+    function fillSeedDelivery(deliveryId, orderId) {
+        ['d-getById-id', 'd-updateStatus-id'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.value = deliveryId;
+        });
+        const orderEl = document.getElementById('d-getByOrder-orderId');
+        if (orderEl && orderId) orderEl.value = orderId;
+    }
+
+    function getDeliveryById() {
+        request('GET', `${GATEWAY_URL}/deliveries/${v('d-getById-id')}`, null, 'r-get-delivery');
+    }
+
+    async function getDeliveryByOrderId() {
+        const data = await request('GET', `${GATEWAY_URL}/deliveries?orderId=${v('d-getByOrder-orderId')}`, null, 'r-get-delivery-by-order');
+        if (data?.id) fillSeedDelivery(data.id, null);
+    }
+
+    function getAllDeliveries() {
+        request('GET', `${GATEWAY_URL}/deliveries`, null, 'r-get-all-deliveries');
+    }
+
+    function filterDeliveriesByStatus() {
+        const status = v('d-filter-status');
+        request('GET', `${GATEWAY_URL}/deliveries?status=${status}`, null, 'r-get-deliveries-by-status');
+    }
+
+    function updateDeliveryStatus() {
+        const id = v('d-updateStatus-id');
+        const status = v('d-updateStatus-status');
+        request('PATCH', `${GATEWAY_URL}/deliveries/${id}/status?status=${status}`, null, 'r-update-delivery-status');
+    }
+
+    // ── Driver API ─────────────────────────────────────────────────────────────
+    function getDriverById() {
+        request('GET', `${GATEWAY_URL}/drivers/${v('drv-getById-id')}`, null, 'r-get-driver');
+    }
+
+    function getAllDrivers() {
+        request('GET', `${GATEWAY_URL}/drivers`, null, 'r-get-all-drivers');
+    }
+
+    function filterDriversByStatus() {
+        request('GET', `${GATEWAY_URL}/drivers?status=${v('drv-filter-status')}`, null, 'r-get-drivers-by-status');
+    }
+
+    function updateDriverStatus() {
+        const id = v('drv-updateStatus-id');
+        const status = v('drv-updateStatus-status');
+        request('PATCH', `${GATEWAY_URL}/drivers/${id}/status?status=${status}`, null, 'r-update-driver-status');
+    }
+
+    function deleteDriver() {
+        request('DELETE', `${GATEWAY_URL}/drivers/${v('drv-delete-id')}`, null, 'r-delete-driver');
+    }
+
+    // ── Auth ───────────────────────────────────────────────────────────────────
+    async function authLogin() {
+        const result = await request('POST', `${GATEWAY_URL}/auth/login`, {
+            email: v('auth-login-email'), password: v('auth-login-password')
+        }, 'r-auth-login');
+        if (result && result.token) {
+            localStorage.setItem('auth-token', result.token);
+            localStorage.setItem('auth-email', result.email);
+            document.getElementById('auth-token-display').value = result.token;
+            document.getElementById('auth-userId-display').textContent = 'userId: ' + (result.userId ?? '');
+            document.getElementById('auth-token-bar').style.display = 'flex';
+            renderAuthStatus();
+        }
+    }
+
+    function registerStaff() {
+        request('POST', `${GATEWAY_URL}/auth/register/staff`, {
+            firstName: v('auth-staff-firstName'), lastName: v('auth-staff-lastName'),
+            email: v('auth-staff-email'), password: v('auth-staff-password'),
+            phone: v('auth-staff-phone'), role: v('auth-staff-role')
+        }, 'r-auth-staff');
+    }
+
+    function getAllUsers() {
+        request('GET', `${GATEWAY_URL}/auth/users`, null, 'r-auth-users');
+    }
+
+    function copyToken() {
+        const val = document.getElementById('auth-token-display').value;
+        navigator.clipboard.writeText(val).catch(() => {
+        });
+    }
+
+    function authLogout() {
+        // JWT auth is stateless (no /auth/logout endpoint) - logout only clears the locally stored token.
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('auth-email');
+        document.getElementById('auth-token-bar').style.display = 'none';
+        document.getElementById('auth-token-display').value = '';
+        renderAuthStatus();
+    }
+
+    function renderAuthStatus() {
+        const token = localStorage.getItem('auth-token');
+        const email = localStorage.getItem('auth-email');
+        document.getElementById('auth-status-text').textContent = token ? `Logged in as ${email}` : 'Not logged in';
+        document.getElementById('btn-logout').disabled = !token;
+    }
+
+    renderAuthStatus();
+    if (localStorage.getItem('auth-token')) {
+        document.getElementById('auth-token-display').value = localStorage.getItem('auth-token');
+        document.getElementById('auth-token-bar').style.display = 'flex';
+    }
+</script>
+</body>
+</html>

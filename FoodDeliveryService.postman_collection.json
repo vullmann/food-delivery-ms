@@ -1,0 +1,4565 @@
+{
+  "info": {
+    "_postman_id": "1c33b98d-8f99-47cc-a4b0-7943247c6408",
+    "name": "FoodDeliveryService",
+    "description": "Two top-level folders: `AuthService` (auth flow tests against auth-service) and `DeliveryService` (delivery-service tests against the delivery-scoping rule in DeliveryService.findAll).\n\n`AuthService`: superadmin login/logout, superadmin creating one staff account per role (restaurant_admin, restaurant_employee, delivery_admin, delivery_driver), login/logout for each created account, and scoped staff creation (restaurant_admin creating a restaurant_employee, delivery_admin creating a delivery_driver) verifying AuthService.assertCanCreate.\n\n`DeliveryService`: self-contained re-logins as DELIVERY_ADMIN/DELIVERY_DRIVER (independent of whether AuthService's own role folders already logged out) followed by `GET /deliveries` — verifies DELIVERY_ADMIN sees every delivery while DELIVERY_DRIVER only ever sees deliveries assigned to itself (DeliveryOrderRepository.findAllByDriverId).\n\nNote: auth-service has no `/auth/logout` endpoint — JWT auth is stateless (see PROJECT_CONTEXT.md \"Planned Refactoring\": a future access-token/refresh-token rework will add real server-side logout). Until then, \"logout\" only means discarding the client-held token, exactly like `authLogout()` in api-tester.html. Every Logout request here validates the token is currently active, then clears the collection variable that holds it.\n\nRun order: `AuthService > Superadmin` must run first (creates the staff accounts and captures their generated emails/userId); everything else — the four `AuthService` role folders, the two `DeliveryService` role folders, and the three `RestaurantService` role folders — can then run in any order, though running `OrderService` first (to place a real order) lets `RestaurantService > Restaurant Employee`'s order-status test drive a genuinely fresh restaurant order instead of falling back to whatever restaurant orders already exist for Bella Italia.\n\n`RestaurantService`: role-based authorization checks against restaurant-service, analogous to `DeliveryService`'s role folders. `Restaurant Admin` self-contained re-login followed by a full create → read → update → delete cycle for both a restaurant and one of its menu items (RestaurantService.assertCallerIsAdmin allows SUPER_ADMIN/RESTAURANT_ADMIN). `Restaurant Employee` self-contained re-login followed by: allowed GET/PATCH of restaurant orders (RestaurantOrderService.assertCallerManagesRestaurantOrders allows restaurant staff) and allowed GET of restaurants (unrestricted), plus forbidden (403) restaurant/menu-item create/update/delete calls (RestaurantService.assertCallerIsAdmin rejects RESTAURANT_EMPLOYEE). `Customer` self-contained re-login followed by a forbidden (403) GET of restaurant orders, proving non-staff roles are blocked from that endpoint while still able to browse restaurants/menu-items.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8088",
+      "description": "api-gateway; /auth/** is public and forwarded to auth-service. Use http://localhost:8084 to hit auth-service directly."
+    },
+    {
+      "key": "superadminEmail",
+      "value": "veitullmann@gmx.de"
+    },
+    {
+      "key": "superadminPassword",
+      "value": "2809",
+      "description": "Set this to the seed SUPER_ADMIN account's plaintext password before running (not stored in data.sql, only its bcrypt hash)."
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "restaurantAdminEmail",
+      "value": ""
+    },
+    {
+      "key": "restaurantAdminPassword",
+      "value": "ChangeMe123!"
+    },
+    {
+      "key": "restaurantAdminToken",
+      "value": ""
+    },
+    {
+      "key": "restaurantEmployeeEmail",
+      "value": ""
+    },
+    {
+      "key": "restaurantEmployeePassword",
+      "value": "ChangeMe123!"
+    },
+    {
+      "key": "restaurantEmployeeToken",
+      "value": ""
+    },
+    {
+      "key": "deliveryAdminEmail",
+      "value": ""
+    },
+    {
+      "key": "deliveryAdminPassword",
+      "value": "ChangeMe123!"
+    },
+    {
+      "key": "deliveryAdminToken",
+      "value": ""
+    },
+    {
+      "key": "deliveryDriverEmail",
+      "value": ""
+    },
+    {
+      "key": "deliveryDriverPassword",
+      "value": "ChangeMe123!"
+    },
+    {
+      "key": "deliveryDriverToken",
+      "value": ""
+    },
+    {
+      "key": "deliveryDriverUserId",
+      "value": "",
+      "description": "Captured from Superadmin > Create Delivery Driver; used to assert DeliveryService > Delivery Driver > Get Own Deliveries only returns deliveries assigned to this driver."
+    },
+    {
+      "key": "sampleDeliveryId",
+      "value": "",
+      "description": "Captured from Delivery Admin > Gets All Deliveries (first result); used by the delivery by-id/status-update requests."
+    },
+    {
+      "key": "sampleDeliveryOrderId",
+      "value": "",
+      "description": "Captured from Delivery Admin > Gets All Deliveries (first result); used by the getByOrderId request."
+    },
+    {
+      "key": "sampleDeliveryStatus",
+      "value": "",
+      "description": "Captured from Delivery Admin > Gets All Deliveries (first result); tracks the sample delivery's current status across status-update requests."
+    },
+    {
+      "key": "sampleDeliveryNextStatus",
+      "value": "",
+      "description": "Computed by Delivery Admin > Updates Delivery Status from sampleDeliveryStatus; the next valid DeliveryStatus to transition to."
+    },
+    {
+      "key": "customerEmail",
+      "value": "anna.mueller@example.com",
+      "description": "Seeded customer (customer-service/auth-service data.sql) used by OrderService > Place Order."
+    },
+    {
+      "key": "customerPassword",
+      "value": "password123"
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": "a1b2c3d4-0001-0001-0001-000000000001",
+      "description": "Anna Müller's seeded customer id."
+    },
+    {
+      "key": "bellaItaliaRestaurantId",
+      "value": "b1c2d3e4-0001-0001-0001-000000000001",
+      "description": "Seeded restaurant (restaurant-service data.sql) used by OrderService > Place Order."
+    },
+    {
+      "key": "placedOrderId",
+      "value": "",
+      "description": "Captured from OrderService > Place Order; the order-service CustomerOrder id."
+    },
+    {
+      "key": "restaurantOrderId",
+      "value": "",
+      "description": "Captured from OrderService > Wait for Restaurant Order to be Created."
+    },
+    {
+      "key": "restaurantOrderPollAttempts",
+      "value": "0"
+    },
+    {
+      "key": "deliveryPollAttempts",
+      "value": "0"
+    },
+    {
+      "key": "restaurantOrderStatus",
+      "value": "",
+      "description": "Tracks the current status of {{restaurantOrderId}}; captured/updated by RestaurantService > Restaurant Employee > Gets Restaurant Orders and Updates Restaurant Order Status, used to compute the next valid RestaurantOrderStatus transition."
+    },
+    {
+      "key": "restaurantOrderNextStatus",
+      "value": "",
+      "description": "Computed by RestaurantService > Restaurant Employee > Updates Restaurant Order Status from restaurantOrderStatus; the next valid RestaurantOrderStatus to transition to."
+    },
+    {
+      "key": "restaurantAdminCreatedRestaurantId",
+      "value": "",
+      "description": "Captured from RestaurantService > Restaurant Admin > Creates Restaurant; used by the update/menu-item/delete requests below it to prove RESTAURANT_ADMIN has full CRUD access (RestaurantService.assertCallerIsAdmin allows it)."
+    },
+    {
+      "key": "restaurantAdminCreatedMenuItemId",
+      "value": "",
+      "description": "Captured from RestaurantService > Restaurant Admin > Creates Menu Item; used by the update/delete menu-item requests below it."
+    }
+  ],
+  "item": [
+    {
+      "name": "AuthService",
+      "item": [
+        {
+          "name": "Superadmin",
+          "item": [
+            {
+              "name": "Superadmin Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response has a non-empty token\", function () {",
+                      "    pm.expect(body.token).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.test(\"Response userId is present\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.test(\"Response email matches the superadmin account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('superadminEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is SUPER_ADMIN\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('SUPER_ADMIN');",
+                      "});",
+                      "",
+                      "if (pm.response.code === 200) {",
+                      "    pm.collectionVariables.set('authToken', pm.response.json().token);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{superadminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Logs in as the seeded SUPER_ADMIN account and stores the JWT in the {{authToken}} collection variable, used to authorize the staff-creation requests below."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Restaurant Admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is RESTAURANT_ADMIN\", function () {",
+                      "    pm.expect(body.role).to.eql('RESTAURANT_ADMIN');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminEmail', body.email);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Rita\",\n  \"lastName\": \"Adminson\",\n  \"email\": \"restaurant.admin.{{$timestamp}}@example.com\",\n  \"password\": \"{{restaurantAdminPassword}}\",\n  \"phone\": \"+491700001001\",\n  \"role\": \"RESTAURANT_ADMIN\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "Superadmin creates a RESTAURANT_ADMIN account. Stores the generated email in {{restaurantAdminEmail}} for the login test in the \"Restaurant Admin\" folder."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Restaurant Employee",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is RESTAURANT_EMPLOYEE\", function () {",
+                      "    pm.expect(body.role).to.eql('RESTAURANT_EMPLOYEE');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantEmployeeEmail', body.email);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Erik\",\n  \"lastName\": \"Employson\",\n  \"email\": \"restaurant.employee.{{$timestamp}}@example.com\",\n  \"password\": \"{{restaurantEmployeePassword}}\",\n  \"phone\": \"+491700001002\",\n  \"role\": \"RESTAURANT_EMPLOYEE\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "Superadmin creates a RESTAURANT_EMPLOYEE account. Stores the generated email in {{restaurantEmployeeEmail}} for the login test in the \"Restaurant Employee\" folder."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Delivery Admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is DELIVERY_ADMIN\", function () {",
+                      "    pm.expect(body.role).to.eql('DELIVERY_ADMIN');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryAdminEmail', body.email);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Dana\",\n  \"lastName\": \"Adminovic\",\n  \"email\": \"delivery.admin.{{$timestamp}}@example.com\",\n  \"password\": \"{{deliveryAdminPassword}}\",\n  \"phone\": \"+491700001003\",\n  \"role\": \"DELIVERY_ADMIN\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "Superadmin creates a DELIVERY_ADMIN account. Stores the generated email in {{deliveryAdminEmail}} for the login test in the \"Delivery Admin\" folder."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Delivery Driver",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is DELIVERY_DRIVER\", function () {",
+                      "    pm.expect(body.role).to.eql('DELIVERY_DRIVER');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryDriverEmail', body.email);",
+                      "pm.collectionVariables.set('deliveryDriverUserId', body.userId);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Dennis\",\n  \"lastName\": \"Driverson\",\n  \"email\": \"delivery.driver.{{$timestamp}}@example.com\",\n  \"password\": \"{{deliveryDriverPassword}}\",\n  \"phone\": \"+491700001004\",\n  \"role\": \"DELIVERY_DRIVER\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "Superadmin creates a DELIVERY_DRIVER account. Stores the generated email in {{deliveryDriverEmail}} for the login test in the \"Delivery Driver\" folder."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Users",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});",
+                      "",
+                      "pm.test(\"Response includes all staff accounts created above\", function () {",
+                      "    const emails = body.map(u => u.email);",
+                      "    pm.expect(emails).to.include(pm.collectionVariables.get('superadminEmail'));",
+                      "    pm.expect(emails).to.include(pm.collectionVariables.get('restaurantAdminEmail'));",
+                      "    pm.expect(emails).to.include(pm.collectionVariables.get('restaurantEmployeeEmail'));",
+                      "    pm.expect(emails).to.include(pm.collectionVariables.get('deliveryAdminEmail'));",
+                      "    pm.expect(emails).to.include(pm.collectionVariables.get('deliveryDriverEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"Each user has userId, role and createdAt\", function () {",
+                      "    body.forEach(u => {",
+                      "        pm.expect(u.userId).to.be.a('string').and.not.empty;",
+                      "        pm.expect(u.role).to.be.a('string').and.not.empty;",
+                      "        pm.expect(u.createdAt).to.be.a('string').and.not.empty;",
+                      "    });",
+                      "});",
+                      "",
+                      "pm.test(\"Password is never exposed\", function () {",
+                      "    body.forEach(u => {",
+                      "        pm.expect(u.password).to.be.undefined;",
+                      "        pm.expect(u.hashedPassword).to.be.undefined;",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "users"
+                  ]
+                },
+                "description": "Superadmin lists all user credentials (AuthService.getAllUsers is restricted to SUPER_ADMIN). Confirms every account created in this run is present and that no password fields leak."
+              },
+              "response": []
+            },
+            {
+              "name": "Superadmin Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('authToken')) {",
+                      "    throw new Error('No authToken set — run \"Superadmin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in superadmin\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('superadminEmail'));",
+                      "});",
+                      "",
+                      "// auth-service has no /auth/logout endpoint (stateless JWT).",
+                      "// \"Logging out\" means discarding the client-held token, so simulate that here.",
+                      "pm.collectionVariables.set('authToken', '');",
+                      "",
+                      "pm.test(\"authToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('authToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{authToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "There is no server-side /auth/logout — confirms the token is still valid, then clears {{authToken}} to simulate the client discarding it (same behavior as authLogout() in api-tester.html)."
+              },
+              "response": []
+            },
+            {
+              "name": "Validate After Logout (expect 400)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 400 (blank token, already logged out)\", function () {",
+                      "    pm.response.to.have.status(400);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{authToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "authToken is now empty after the logout step, so /auth/validate rejects it (@NotBlank on ValidateRequest.token -> 400), proving the discarded token can no longer be used."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Restaurant Admin",
+          "item": [
+            {
+              "name": "Restaurant Admin Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminEmail')) {",
+                      "    throw new Error('No restaurantAdminEmail set — run \"Superadmin > Create Restaurant Admin\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is RESTAURANT_ADMIN\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('RESTAURANT_ADMIN');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{restaurantAdminEmail}}\",\n  \"password\": \"{{restaurantAdminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Logs in as the RESTAURANT_ADMIN account created by \"Superadmin > Create Restaurant Admin\" and stores the JWT in {{restaurantAdminToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Creates Restaurant Employee",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is RESTAURANT_EMPLOYEE\", function () {",
+                      "    pm.expect(body.role).to.eql('RESTAURANT_EMPLOYEE');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ella\",\n  \"lastName\": \"Employson\",\n  \"email\": \"restaurant.employee.byadmin.{{$timestamp}}@example.com\",\n  \"password\": \"ChangeMe123!\",\n  \"phone\": \"+491700002002\",\n  \"role\": \"RESTAURANT_EMPLOYEE\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN creates a RESTAURANT_EMPLOYEE account using its own token, exercising the scoped staff-creation rule in AuthService.assertCanCreate (RESTAURANT_ADMIN may only create RESTAURANT_EMPLOYEE accounts)."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Users (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});",
+                      "",
+                      "pm.test(\"Problem detail explains the role restriction\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.detail).to.include('not allowed to list all users');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "users"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is not SUPER_ADMIN, so AuthService.getAllUsers throws InsufficientRoleException -> 403, exercising the role gate on GET /auth/users."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in restaurant admin\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminToken', '');",
+                      "",
+                      "pm.test(\"restaurantAdminToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('restaurantAdminToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{restaurantAdminToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{restaurantAdminToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Restaurant Employee",
+          "item": [
+            {
+              "name": "Restaurant Employee Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeEmail')) {",
+                      "    throw new Error('No restaurantEmployeeEmail set — run \"Superadmin > Create Restaurant Employee\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantEmployeeEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is RESTAURANT_EMPLOYEE\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('RESTAURANT_EMPLOYEE');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantEmployeeToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{restaurantEmployeeEmail}}\",\n  \"password\": \"{{restaurantEmployeePassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Logs in as the RESTAURANT_EMPLOYEE account created by \"Superadmin > Create Restaurant Employee\" and stores the JWT in {{restaurantEmployeeToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in restaurant employee\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantEmployeeEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantEmployeeToken', '');",
+                      "",
+                      "pm.test(\"restaurantEmployeeToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('restaurantEmployeeToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{restaurantEmployeeToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{restaurantEmployeeToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Delivery Admin",
+          "item": [
+            {
+              "name": "Delivery Admin Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminEmail')) {",
+                      "    throw new Error('No deliveryAdminEmail set — run \"Superadmin > Create Delivery Admin\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is DELIVERY_ADMIN\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('DELIVERY_ADMIN');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryAdminToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deliveryAdminEmail}}\",\n  \"password\": \"{{deliveryAdminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Logs in as the DELIVERY_ADMIN account created by \"Superadmin > Create Delivery Admin\" and stores the JWT in {{deliveryAdminToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Creates Delivery Driver",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response role is DELIVERY_DRIVER\", function () {",
+                      "    pm.expect(body.role).to.eql('DELIVERY_DRIVER');",
+                      "});",
+                      "",
+                      "pm.test(\"Response has userId and email\", function () {",
+                      "    pm.expect(body.userId).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Doreen\",\n  \"lastName\": \"Driverson\",\n  \"email\": \"delivery.driver.byadmin.{{$timestamp}}@example.com\",\n  \"password\": \"ChangeMe123!\",\n  \"phone\": \"+491700002004\",\n  \"role\": \"DELIVERY_DRIVER\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register",
+                    "staff"
+                  ]
+                },
+                "description": "DELIVERY_ADMIN creates a DELIVERY_DRIVER account using its own token, exercising the scoped staff-creation rule in AuthService.assertCanCreate (DELIVERY_ADMIN may only create DELIVERY_DRIVER accounts)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in delivery admin\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryAdminToken', '');",
+                      "",
+                      "pm.test(\"deliveryAdminToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('deliveryAdminToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{deliveryAdminToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{deliveryAdminToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Delivery Driver",
+          "item": [
+            {
+              "name": "Delivery Driver Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverEmail')) {",
+                      "    throw new Error('No deliveryDriverEmail set — run \"Superadmin > Create Delivery Driver\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryDriverEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is DELIVERY_DRIVER\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('DELIVERY_DRIVER');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryDriverToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deliveryDriverEmail}}\",\n  \"password\": \"{{deliveryDriverPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Logs in as the DELIVERY_DRIVER account created by \"Superadmin > Create Delivery Driver\" and stores the JWT in {{deliveryDriverToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in delivery driver\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryDriverEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryDriverToken', '');",
+                      "",
+                      "pm.test(\"deliveryDriverToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('deliveryDriverToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{deliveryDriverToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{deliveryDriverToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OrderService",
+      "item": [
+        {
+          "name": "Customer Login (Anna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Response email matches the seeded customer\", function () {",
+                  "    pm.expect(body.email).to.eql(pm.collectionVariables.get('customerEmail'));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('customerToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logs in as the seeded customer Anna Müller (customer-service/auth-service data.sql) to place a real order as her below.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('customerToken')) {",
+                  "    throw new Error('No customerToken set — run \"Customer Login (Anna)\" first.');",
+                  "}",
+                  "pm.collectionVariables.set('restaurantOrderPollAttempts', '0');",
+                  "pm.collectionVariables.set('deliveryPollAttempts', '0');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has an id and status PENDING\", function () {",
+                  "    pm.expect(body.id).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.status).to.eql('PENDING');",
+                  "});",
+                  "",
+                  "pm.test(\"Total amount matches the two ordered items\", function () {",
+                  "    pm.expect(body.totalAmount).to.eql(20.4);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('placedOrderId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "CustomerOrderController.placeOrder — Anna orders Spaghetti Carbonara + Tiramisu from Bella Italia (both seeded in restaurant-service/data.sql). Publishes OrderPlacedEvent via the outbox (processed on the next OutboxEventPublisher tick, up to ~5s later).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"restaurantId\": \"{{bellaItaliaRestaurantId}}\",\n  \"deliveryAddress\": {\n    \"street\": \"Hauptstraße\",\n    \"houseNumber\": \"12\",\n    \"city\": \"Berlin\",\n    \"zip\": \"10115\",\n    \"country\": \"Germany\"\n  },\n  \"items\": [\n    {\n      \"menuItemId\": \"c1d2e3f4-0102-0102-0102-000000000002\",\n      \"name\": \"Spaghetti Carbonara\",\n      \"description\": \"Classic carbonara with guanciale and pecorino\",\n      \"quantity\": 1,\n      \"price\": 13.9\n    },\n    {\n      \"menuItemId\": \"c1d2e3f4-0103-0103-0103-000000000003\",\n      \"name\": \"Tiramisu\",\n      \"description\": \"Homemade tiramisu with mascarpone\",\n      \"quantity\": 1,\n      \"price\": 6.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Restaurant Admin Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('restaurantAdminEmail')) {",
+                  "    throw new Error('No restaurantAdminEmail set — run \"AuthService > Superadmin > Create Restaurant Admin\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Response email matches the created account\", function () {",
+                  "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantAdminEmail'));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('restaurantAdminToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Self-contained re-login as RESTAURANT_ADMIN (independent of whether AuthService > Restaurant Admin already logged out) so this folder can run standalone.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{restaurantAdminEmail}}\",\n  \"password\": \"{{restaurantAdminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wait for Restaurant Order to be Created",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('placedOrderId')) {",
+                  "    throw new Error('No placedOrderId set — run \"Place Order\" first.');",
+                  "}",
+                  "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                  "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const match = body.find(o => o.customerOrderId === pm.collectionVariables.get('placedOrderId'));",
+                  "const attempts = parseInt(pm.collectionVariables.get('restaurantOrderPollAttempts') || '0', 10);",
+                  "",
+                  "if (!match) {",
+                  "    if (attempts >= 20) {",
+                  "        pm.test(\"Restaurant order was created within the retry budget\", function () {",
+                  "            pm.expect.fail('OrderPlacedEvent was not consumed by restaurant-service after 20 attempts (~10s). Check Kafka / restaurant-service logs — OutboxEventPublisher ticks every 5s, so this should normally appear well within that budget.');",
+                  "        });",
+                  "    } else {",
+                  "        pm.collectionVariables.set('restaurantOrderPollAttempts', String(attempts + 1));",
+                  "        const start = Date.now();",
+                  "        while (Date.now() - start < 500) { /* brief wait for outbox tick + Kafka consumption */ }",
+                  "        pm.execution.setNextRequest(pm.info.requestName);",
+                  "    }",
+                  "} else {",
+                  "    pm.collectionVariables.set('restaurantOrderPollAttempts', '0');",
+                  "    pm.collectionVariables.set('restaurantOrderId', match.id);",
+                  "    pm.test(\"Restaurant order starts as RECEIVED\", function () {",
+                  "        pm.expect(match.status).to.eql('RECEIVED');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{restaurantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "restaurants",
+                "{{bellaItaliaRestaurantId}}",
+                "orders"
+              ]
+            },
+            "description": "Polls RestaurantOrderController.getOrders (re-running itself via pm.execution.setNextRequest, up to 20 times / ~10s) until the OrderPlacedEvent published by \"Place Order\" has been consumed and a matching RestaurantOrder exists. Captures its id into {{restaurantOrderId}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Advance Restaurant Order to CONFIRMED",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('restaurantOrderId')) {",
+                  "    throw new Error('No restaurantOrderId set — run \"Wait for Restaurant Order to be Created\" first.');",
+                  "}",
+                  "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                  "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{restaurantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders/{{restaurantOrderId}}/status?status=CONFIRMED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "restaurants",
+                "{{bellaItaliaRestaurantId}}",
+                "orders",
+                "{{restaurantOrderId}}",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "CONFIRMED"
+                }
+              ]
+            },
+            "description": "RestaurantOrderController.updateStatus → CONFIRMED. Also publishes OrderConfirmedEvent (order-service updates its own CustomerOrder status accordingly, not asserted here)."
+          },
+          "response": []
+        },
+        {
+          "name": "Advance Restaurant Order to PREPARING",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('restaurantOrderId')) {",
+                  "    throw new Error('No restaurantOrderId set — run \"Wait for Restaurant Order to be Created\" first.');",
+                  "}",
+                  "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                  "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{restaurantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders/{{restaurantOrderId}}/status?status=PREPARING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "restaurants",
+                "{{bellaItaliaRestaurantId}}",
+                "orders",
+                "{{restaurantOrderId}}",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PREPARING"
+                }
+              ]
+            },
+            "description": "RestaurantOrderController.updateStatus → PREPARING. "
+          },
+          "response": []
+        },
+        {
+          "name": "Advance Restaurant Order to READY_FOR_DELIVERY",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('restaurantOrderId')) {",
+                  "    throw new Error('No restaurantOrderId set — run \"Wait for Restaurant Order to be Created\" first.');",
+                  "}",
+                  "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                  "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{restaurantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders/{{restaurantOrderId}}/status?status=READY_FOR_DELIVERY",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "restaurants",
+                "{{bellaItaliaRestaurantId}}",
+                "orders",
+                "{{restaurantOrderId}}",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "READY_FOR_DELIVERY"
+                }
+              ]
+            },
+            "description": "RestaurantOrderController.updateStatus → READY_FOR_DELIVERY. Publishes OrderReadyForDeliveryEvent via the outbox — this is what delivery-service consumes to create a fresh DeliveryOrder (and auto-assign an AVAILABLE driver, if any exist)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delivery Admin Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('deliveryAdminEmail')) {",
+                  "    throw new Error('No deliveryAdminEmail set — run \"AuthService > Superadmin > Create Delivery Admin\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Response email matches the created account\", function () {",
+                  "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryAdminEmail'));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('deliveryAdminToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Self-contained re-login as DELIVERY_ADMIN so this folder can run standalone; also leaves {{deliveryAdminToken}} populated for the DeliveryService folder that follows.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{deliveryAdminEmail}}\",\n  \"password\": \"{{deliveryAdminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wait for Delivery to be Created",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('placedOrderId')) {",
+                  "    throw new Error('No placedOrderId set — run \"Place Order\" first.');",
+                  "}",
+                  "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                  "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const attempts = parseInt(pm.collectionVariables.get('deliveryPollAttempts') || '0', 10);",
+                  "",
+                  "if (pm.response.code === 404) {",
+                  "    if (attempts >= 20) {",
+                  "        pm.test(\"Delivery was created within the retry budget\", function () {",
+                  "            pm.expect.fail('OrderReadyForDeliveryEvent was not consumed by delivery-service after 20 attempts (~10s). Check Kafka / delivery-service logs.');",
+                  "        });",
+                  "    } else {",
+                  "        pm.collectionVariables.set('deliveryPollAttempts', String(attempts + 1));",
+                  "        const start = Date.now();",
+                  "        while (Date.now() - start < 500) { /* brief wait for outbox tick + Kafka consumption */ }",
+                  "        pm.execution.setNextRequest(pm.info.requestName);",
+                  "    }",
+                  "} else {",
+                  "    pm.test(\"Status code is 200\", function () {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.test(\"Delivery matches the placed order\", function () {",
+                  "        pm.expect(body.orderId).to.eql(pm.collectionVariables.get('placedOrderId'));",
+                  "    });",
+                  "",
+                  "    pm.collectionVariables.set('deliveryPollAttempts', '0');",
+                  "    pm.collectionVariables.set('sampleDeliveryId', body.id);",
+                  "    pm.collectionVariables.set('sampleDeliveryOrderId', body.orderId);",
+                  "    pm.collectionVariables.set('sampleDeliveryStatus', body.status);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{deliveryAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries?orderId={{placedOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "orderId",
+                  "value": "{{placedOrderId}}"
+                }
+              ]
+            },
+            "description": "Polls DeliveryController.getByOrderId (404 until DeliveryService.receiveOrder has processed OrderReadyForDeliveryEvent; re-runs itself via pm.execution.setNextRequest up to 20 times / ~10s) then captures the fresh delivery into {{sampleDeliveryId}} / {{sampleDeliveryOrderId}} / {{sampleDeliveryStatus}} — the same variables the DeliveryService folder's requests consume, so those now exercise a real, freshly created delivery instead of only the static data.sql fixture."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "DeliveryService",
+      "item": [
+        {
+          "name": "Delivery Admin",
+          "item": [
+            {
+              "name": "Delivery Admin Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminEmail')) {",
+                      "    throw new Error('No deliveryAdminEmail set — run \"AuthService > Superadmin > Create Delivery Admin\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is DELIVERY_ADMIN\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('DELIVERY_ADMIN');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryAdminToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deliveryAdminEmail}}\",\n  \"password\": \"{{deliveryAdminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Self-contained re-login as DELIVERY_ADMIN (independent of whether AuthService > Delivery Admin already logged out) so this folder can run standalone; stores the JWT in {{deliveryAdminToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets All Deliveries",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});",
+                      "",
+                      "// Only capture a fallback sample here if OrderService > Wait for Delivery to be Created hasn't already",
+                      "// set one — that request captures the genuinely fresh delivery from placing a real order end-to-end,",
+                      "// and it runs earlier in a full collection run, so it takes priority. This capture just lets the",
+                      "// DeliveryService folder work standalone (e.g. against the static fixture in delivery-service/data.sql).",
+                      "if (body.length > 0 && !pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    pm.collectionVariables.set('sampleDeliveryId', body[0].id);",
+                      "    pm.collectionVariables.set('sampleDeliveryOrderId', body[0].orderId);",
+                      "    pm.collectionVariables.set('sampleDeliveryStatus', body[0].status);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries"
+                  ]
+                },
+                "description": "DELIVERY_ADMIN is not scoped to a single driver, so GET /deliveries (DeliveryService.findAll) returns every delivery in the system (optionally filter with ?status=). Also captures the first result into {{sampleDeliveryId}} / {{sampleDeliveryOrderId}} / {{sampleDeliveryStatus}} for the requests below."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Delivery By Id",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    throw new Error('No sampleDeliveryId set — run the \"OrderService\" folder first (it places a real order and drives it through to a delivery), or run \"Delivery Admin Gets All Deliveries\" against a database that already has the static delivery-service/data.sql fixture loaded.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Returned delivery matches the requested id\", function () {",
+                      "    pm.expect(body.id).to.eql(pm.collectionVariables.get('sampleDeliveryId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{sampleDeliveryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{sampleDeliveryId}}"
+                  ]
+                },
+                "description": "DeliveryController.getById happy path, using the delivery captured by \"Delivery Admin Gets All Deliveries\"."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Delivery By Id (404)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{$guid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "DeliveryController.getById with an id that does not exist → DeliveryOrderNotFoundException → 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Delivery By Order Id",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    throw new Error('No sampleDeliveryId set — run the \"OrderService\" folder first (it places a real order and drives it through to a delivery), or run \"Delivery Admin Gets All Deliveries\" against a database that already has the static delivery-service/data.sql fixture loaded.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Returned delivery matches the requested orderId\", function () {",
+                      "    pm.expect(body.orderId).to.eql(pm.collectionVariables.get('sampleDeliveryOrderId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries?orderId={{sampleDeliveryOrderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderId",
+                      "value": "{{sampleDeliveryOrderId}}"
+                    }
+                  ]
+                },
+                "description": "DeliveryController.getByOrderId happy path, using the delivery captured by \"Delivery Admin Gets All Deliveries\"."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Delivery By Order Id (404)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries?orderId={{$guid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderId",
+                      "value": "{{$guid}}"
+                    }
+                  ]
+                },
+                "description": "DeliveryController.getByOrderId with an orderId that does not exist → 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Updates Delivery Status",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    throw new Error('No sampleDeliveryId set — run the \"OrderService\" folder first (it places a real order and drives it through to a delivery), or run \"Delivery Admin Gets All Deliveries\" against a database that already has the static delivery-service/data.sql fixture loaded.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}",
+                      "const statusMap = { PENDING: 'DRIVER_ASSIGNED', DRIVER_ASSIGNED: 'PICKED_UP', PICKED_UP: 'DELIVERED' };",
+                      "const current = pm.collectionVariables.get('sampleDeliveryStatus');",
+                      "const next = statusMap[current];",
+                      "if (!next) {",
+                      "    throw new Error(`Sample delivery is in terminal status \"${current}\" (DELIVERED/CANCELLED) — no valid transition to demonstrate. Run the \"OrderService\" folder again to place a fresh order and get a new delivery.`);",
+                      "}",
+                      "pm.collectionVariables.set('sampleDeliveryNextStatus', next);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});",
+                      "",
+                      "// Keep the tracked status in sync so later requests (e.g. the 409 test below) see the real current state.",
+                      "pm.collectionVariables.set('sampleDeliveryStatus', pm.collectionVariables.get('sampleDeliveryNextStatus'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{sampleDeliveryId}}/status?status={{sampleDeliveryNextStatus}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{sampleDeliveryId}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "{{sampleDeliveryNextStatus}}"
+                    }
+                  ]
+                },
+                "description": "DeliveryController.updateStatus happy path: advances the sample delivery to the next valid DeliveryStatus (PENDING → DRIVER_ASSIGNED → PICKED_UP → DELIVERED)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Updates Delivery Status (Invalid Transition)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    throw new Error('No sampleDeliveryId set — run the \"OrderService\" folder first (it places a real order and drives it through to a delivery), or run \"Delivery Admin Gets All Deliveries\" against a database that already has the static delivery-service/data.sql fixture loaded.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 409\", function () {",
+                      "    pm.response.to.have.status(409);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{sampleDeliveryId}}/status?status=PENDING",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{sampleDeliveryId}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "PENDING"
+                    }
+                  ]
+                },
+                "description": "No DeliveryStatus ever transitions back to PENDING, so this is invalid from any current status → DeliveryOrder.transitionTo throws IllegalStateException → 409 (see GlobalExceptionHandler)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Updates Delivery Status (404)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{$guid}}/status?status=PENDING",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{$guid}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "PENDING"
+                    }
+                  ]
+                },
+                "description": "DeliveryController.updateStatus with an id that does not exist → 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Driver By Id",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Returned driver matches the created delivery driver\", function () {",
+                      "    pm.expect(body.id).to.eql(pm.collectionVariables.get('deliveryDriverUserId'));",
+                      "});",
+                      "",
+                      "pm.test(\"Driver defaults to AVAILABLE\", function () {",
+                      "    pm.expect(body.status).to.eql('AVAILABLE');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{deliveryDriverUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{deliveryDriverUserId}}"
+                  ]
+                },
+                "description": "DriverController.getById happy path, using the driver created by \"AuthService > Superadmin > Create Delivery Driver\" (its Driver profile is created asynchronously by DriverService.registerFromEvent consuming UserRegisteredEvent — run this after that request has had a moment to be consumed)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets Driver By Id (404)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{$guid}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "DriverController.getById with an id that does not exist → DriverNotFoundException → 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Gets All Drivers",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});",
+                      "",
+                      "pm.test(\"Includes the created delivery driver\", function () {",
+                      "    const ids = body.map(d => d.id);",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('deliveryDriverUserId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers?status=AVAILABLE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "AVAILABLE"
+                    }
+                  ]
+                },
+                "description": "DriverController.getAll happy path, filtered to AVAILABLE. Run before \"Delivery Admin Updates Driver Status\" so the created driver is still AVAILABLE."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Updates Driver Status",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{deliveryDriverUserId}}/status?status=OFFLINE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{deliveryDriverUserId}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "OFFLINE"
+                    }
+                  ]
+                },
+                "description": "DriverController.updateStatus happy path."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Updates Driver Status (404)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{$guid}}/status?status=OFFLINE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{$guid}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "OFFLINE"
+                    }
+                  ]
+                },
+                "description": "DriverController.updateStatus with an id that does not exist → 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Deletes Driver",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{deliveryDriverUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{deliveryDriverUserId}}"
+                  ]
+                },
+                "description": "DriverController.delete happy path. Run last in this folder — removes the driver roster entry created for this run (the auth-service account and JWT are unaffected, so the \"Delivery Driver\" folder still works afterwards)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Deletes Driver (404 - already deleted)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{deliveryDriverUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{deliveryDriverUserId}}"
+                  ]
+                },
+                "description": "Deleting the same driver again → DriverNotFoundException → 404. Relies on \"Delivery Admin Deletes Driver\" above having run first in this same execution."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Admin Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryAdminToken')) {",
+                      "    throw new Error('No deliveryAdminToken set — run \"Delivery Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in delivery admin\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryAdminToken', '');",
+                      "",
+                      "pm.test(\"deliveryAdminToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('deliveryAdminToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{deliveryAdminToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{deliveryAdminToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Delivery Driver",
+          "item": [
+            {
+              "name": "Delivery Driver Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverEmail')) {",
+                      "    throw new Error('No deliveryDriverEmail set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryDriverEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is DELIVERY_DRIVER\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('DELIVERY_DRIVER');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryDriverToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deliveryDriverEmail}}\",\n  \"password\": \"{{deliveryDriverPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Self-contained re-login as DELIVERY_DRIVER (independent of whether AuthService > Delivery Driver already logged out) so this folder can run standalone; stores the JWT in {{deliveryDriverToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Gets Own Deliveries",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});",
+                      "",
+                      "pm.test(\"Every returned delivery belongs to this driver\", function () {",
+                      "    const driverId = pm.collectionVariables.get('deliveryDriverUserId');",
+                      "    body.forEach(delivery => pm.expect(delivery.driverId).to.eql(driverId));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryDriverToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries"
+                  ]
+                },
+                "description": "DELIVERY_DRIVER's GET /deliveries (DeliveryService.findAll) is scoped server-side to deliveries assigned to the caller (driverId == caller's userId, via DeliveryOrderRepository.findAllByDriverId instead of findAll). A freshly created driver typically has no assigned deliveries yet, so an empty array is expected and still passes — the point of this test is that no other driver's deliveries ever leak into the response."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Gets Delivery By Id (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('sampleDeliveryId')) {",
+                      "    throw new Error('No sampleDeliveryId set — run the \"OrderService\" folder first (it places a real order and drives it through to a delivery), or run \"Delivery Admin Gets All Deliveries\" against a database that already has the static delivery-service/data.sql fixture loaded.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryDriverToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/deliveries/{{sampleDeliveryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "deliveries",
+                    "{{sampleDeliveryId}}"
+                  ]
+                },
+                "description": "A freshly created driver does not own the sample delivery captured by \"Delivery Admin Gets All Deliveries\", so DeliveryService.assertDriverOwnsDelivery rejects it → DeliveryOrderAccessDeniedException → 403."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Gets All Drivers (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryDriverToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers"
+                  ]
+                },
+                "description": "DELIVERY_DRIVER may only manage its own deliveries, not the driver roster — DriverService.assertCallerManagesDrivers rejects it → 403."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Deletes Own Driver Profile (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverUserId')) {",
+                      "    throw new Error('No deliveryDriverUserId set — run \"AuthService > Superadmin > Create Delivery Driver\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{deliveryDriverToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/drivers/{{deliveryDriverUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "drivers",
+                    "{{deliveryDriverUserId}}"
+                  ]
+                },
+                "description": "Same role check as the other /drivers endpoints — rejected before the existence check runs, so this is 403 even if \"Delivery Admin Deletes Driver\" already ran."
+              },
+              "response": []
+            },
+            {
+              "name": "Delivery Driver Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('deliveryDriverToken')) {",
+                      "    throw new Error('No deliveryDriverToken set — run \"Delivery Driver Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in delivery driver\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('deliveryDriverEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('deliveryDriverToken', '');",
+                      "",
+                      "pm.test(\"deliveryDriverToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('deliveryDriverToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{deliveryDriverToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{deliveryDriverToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RestaurantService",
+      "item": [
+        {
+          "name": "Restaurant Admin",
+          "item": [
+            {
+              "name": "Restaurant Admin Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminEmail')) {",
+                      "    throw new Error('No restaurantAdminEmail set — run \"AuthService > Superadmin > Create Restaurant Admin\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is RESTAURANT_ADMIN\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('RESTAURANT_ADMIN');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{restaurantAdminEmail}}\",\n  \"password\": \"{{restaurantAdminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Self-contained re-login as RESTAURANT_ADMIN (independent of whether AuthService > Restaurant Admin or OrderService already logged it in/out) so this folder can run standalone; stores the JWT in {{restaurantAdminToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Creates Restaurant",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response has an id and matches the request\", function () {",
+                      "    pm.expect(body.id).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.name).to.eql('Trattoria Admin Test');",
+                      "    pm.expect(body.cuisineType).to.eql('ITALIAN');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminCreatedRestaurantId', body.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Trattoria Admin Test\",\n  \"description\": \"Created by RESTAURANT_ADMIN to prove full CRUD access\",\n  \"address\": {\n    \"street\": \"Teststraße\",\n    \"houseNumber\": \"1\",\n    \"city\": \"Berlin\",\n    \"zip\": \"10115\",\n    \"country\": \"Germany\"\n  },\n  \"phone\": \"+491700009101\",\n  \"email\": \"trattoria.admintest.{{$timestamp}}@example.com\",\n  \"cuisineType\": \"ITALIAN\",\n  \"isOpen\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is one of the two roles allowed by RestaurantService.assertCallerIsAdmin, so RestaurantController.create succeeds → 201. Captures the new id into {{restaurantAdminCreatedRestaurantId}} for the requests below, proving RESTAURANT_ADMIN has full restaurant/menu-item CRUD access."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Creates Menu Item",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminCreatedRestaurantId')) {",
+                      "    throw new Error('No restaurantAdminCreatedRestaurantId set — run \"Restaurant Admin Creates Restaurant\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response has an id and matches the request\", function () {",
+                      "    pm.expect(body.id).to.be.a('string').and.not.empty;",
+                      "    pm.expect(body.name).to.eql('Admin Test Pizza');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminCreatedMenuItemId', body.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Admin Test Pizza\",\n  \"description\": \"Created by RESTAURANT_ADMIN to prove full CRUD access\",\n  \"price\": 11.50,\n  \"category\": \"MAIN\",\n  \"available\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{restaurantAdminCreatedRestaurantId}}/menu-items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{restaurantAdminCreatedRestaurantId}}",
+                    "menu-items"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is allowed by RestaurantService.assertCallerIsAdmin, so MenuItemController.createMenuItem succeeds → 201. Captures the new id into {{restaurantAdminCreatedMenuItemId}} for the requests below."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Updates Restaurant",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminCreatedRestaurantId')) {",
+                      "    throw new Error('No restaurantAdminCreatedRestaurantId set — run \"Restaurant Admin Creates Restaurant\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Restaurant was updated\", function () {",
+                      "    pm.expect(body.name).to.eql('Trattoria Admin Test (Updated)');",
+                      "    pm.expect(body.isOpen).to.eql(false);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Trattoria Admin Test (Updated)\",\n  \"description\": \"Updated by RESTAURANT_ADMIN to prove full CRUD access\",\n  \"address\": {\n    \"street\": \"Teststraße\",\n    \"houseNumber\": \"1\",\n    \"city\": \"Berlin\",\n    \"zip\": \"10115\",\n    \"country\": \"Germany\"\n  },\n  \"phone\": \"+491700009101\",\n  \"email\": \"trattoria.admintest.{{$timestamp}}@example.com\",\n  \"cuisineType\": \"ITALIAN\",\n  \"isOpen\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{restaurantAdminCreatedRestaurantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{restaurantAdminCreatedRestaurantId}}"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is allowed by RestaurantService.assertCallerIsAdmin, so RestaurantController.update succeeds → 200."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Updates Menu Item",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminCreatedMenuItemId')) {",
+                      "    throw new Error('No restaurantAdminCreatedMenuItemId set — run \"Restaurant Admin Creates Menu Item\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Menu item was updated\", function () {",
+                      "    pm.expect(body.name).to.eql('Admin Test Pizza (Updated)');",
+                      "    pm.expect(body.available).to.eql(false);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Admin Test Pizza (Updated)\",\n  \"description\": \"Updated by RESTAURANT_ADMIN to prove full CRUD access\",\n  \"price\": 12.50,\n  \"category\": \"MAIN\",\n  \"available\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{restaurantAdminCreatedRestaurantId}}/menu-items/{{restaurantAdminCreatedMenuItemId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{restaurantAdminCreatedRestaurantId}}",
+                    "menu-items",
+                    "{{restaurantAdminCreatedMenuItemId}}"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is allowed by RestaurantService.assertCallerIsAdmin, so MenuItemController.updateMenuItem succeeds → 200."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Deletes Menu Item",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminCreatedMenuItemId')) {",
+                      "    throw new Error('No restaurantAdminCreatedMenuItemId set — run \"Restaurant Admin Creates Menu Item\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{restaurantAdminCreatedRestaurantId}}/menu-items/{{restaurantAdminCreatedMenuItemId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{restaurantAdminCreatedRestaurantId}}",
+                    "menu-items",
+                    "{{restaurantAdminCreatedMenuItemId}}"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is allowed by RestaurantService.assertCallerIsAdmin, so MenuItemController.deleteMenuItem succeeds → 204."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Deletes Restaurant",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminCreatedRestaurantId')) {",
+                      "    throw new Error('No restaurantAdminCreatedRestaurantId set — run \"Restaurant Admin Creates Restaurant\" first.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminCreatedRestaurantId', '');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{restaurantAdminCreatedRestaurantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{restaurantAdminCreatedRestaurantId}}"
+                  ]
+                },
+                "description": "RESTAURANT_ADMIN is allowed by RestaurantService.assertCallerIsAdmin, so RestaurantController.delete succeeds → 204, completing the create → read → update → delete cycle for both restaurants and menu items under RESTAURANT_ADMIN."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Admin Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantAdminToken')) {",
+                      "    throw new Error('No restaurantAdminToken set — run \"Restaurant Admin Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in restaurant admin\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantAdminEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantAdminToken', '');",
+                      "",
+                      "pm.test(\"restaurantAdminToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('restaurantAdminToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{restaurantAdminToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{restaurantAdminToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Restaurant Employee",
+          "item": [
+            {
+              "name": "Restaurant Employee Login",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeEmail')) {",
+                      "    throw new Error('No restaurantEmployeeEmail set — run \"AuthService > Superadmin > Create Restaurant Employee\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the created account\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantEmployeeEmail'));",
+                      "});",
+                      "",
+                      "pm.test(\"JWT role claim is RESTAURANT_EMPLOYEE\", function () {",
+                      "    const payload = JSON.parse(atob(body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "    pm.expect(payload.role).to.eql('RESTAURANT_EMPLOYEE');",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantEmployeeToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{restaurantEmployeeEmail}}\",\n  \"password\": \"{{restaurantEmployeePassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Self-contained re-login as RESTAURANT_EMPLOYEE (independent of whether AuthService > Restaurant Employee already logged out) so this folder can run standalone; stores the JWT in {{restaurantEmployeeToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Gets Restaurant Orders",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});",
+                      "",
+                      "// Only capture a fallback sample here if OrderService > \"Wait for Restaurant Order to be Created\" hasn't",
+                      "// already set one — that request captures the genuinely fresh restaurant order from placing a real order",
+                      "// end-to-end, and it runs earlier in a full collection run, so it takes priority. This capture just lets",
+                      "// this folder work standalone against whatever restaurant orders already exist for Bella Italia.",
+                      "if (body.length > 0 && !pm.collectionVariables.get('restaurantOrderId')) {",
+                      "    pm.collectionVariables.set('restaurantOrderId', body[0].id);",
+                      "}",
+                      "",
+                      "const match = body.find(o => o.id === pm.collectionVariables.get('restaurantOrderId'));",
+                      "if (match) {",
+                      "    pm.collectionVariables.set('restaurantOrderStatus', match.status);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "orders"
+                  ]
+                },
+                "description": "RESTAURANT_EMPLOYEE is restaurant staff, so RestaurantOrderService.assertCallerManagesRestaurantOrders allows it — RestaurantOrderController.getOrders returns 200. Also captures the current status of {{restaurantOrderId}} into {{restaurantOrderStatus}} for \"Updates Restaurant Order Status\" below (falling back to the first order returned if {{restaurantOrderId}} was not already set by the OrderService folder)."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Updates Restaurant Order Status",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantOrderId')) {",
+                      "    throw new Error('No restaurantOrderId set — run \"Restaurant Employee Gets Restaurant Orders\" first, or run the \"OrderService\" folder to place a real order.');",
+                      "}",
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}",
+                      "const statusMap = { RECEIVED: 'CONFIRMED', CONFIRMED: 'PREPARING', PREPARING: 'READY_FOR_DELIVERY', READY_FOR_DELIVERY: 'PICKED_UP' };",
+                      "const current = pm.collectionVariables.get('restaurantOrderStatus');",
+                      "const next = statusMap[current];",
+                      "if (!next) {",
+                      "    throw new Error(`Sample restaurant order is in terminal status \"${current}\" (PICKED_UP/CANCELLED) or unknown — no valid transition to demonstrate. Run the \"OrderService\" folder again to place a fresh order and get a new restaurant order.`);",
+                      "}",
+                      "pm.collectionVariables.set('restaurantOrderNextStatus', next);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 204\", function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantOrderStatus', pm.collectionVariables.get('restaurantOrderNextStatus'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders/{{restaurantOrderId}}/status?status={{restaurantOrderNextStatus}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "orders",
+                    "{{restaurantOrderId}}",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "{{restaurantOrderNextStatus}}"
+                    }
+                  ]
+                },
+                "description": "RESTAURANT_EMPLOYEE is restaurant staff, so RestaurantOrderService.assertCallerManagesRestaurantOrders allows it — RestaurantOrderController.updateStatus returns 204. Advances the sample restaurant order to the next valid RestaurantOrderStatus (RECEIVED → CONFIRMED → PREPARING → READY_FOR_DELIVERY → PICKED_UP)."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Creates Restaurant (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Forbidden Restaurant\",\n  \"description\": \"Should not be creatable by RESTAURANT_EMPLOYEE\",\n  \"address\": {\n    \"street\": \"Teststraße\",\n    \"houseNumber\": \"1\",\n    \"city\": \"Berlin\",\n    \"zip\": \"10115\",\n    \"country\": \"Germany\"\n  },\n  \"phone\": \"+491700009002\",\n  \"email\": \"forbidden.restaurant.{{$timestamp}}@example.com\",\n  \"cuisineType\": \"ITALIAN\",\n  \"isOpen\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants"
+                  ]
+                },
+                "description": "RESTAURANT_EMPLOYEE is not SUPER_ADMIN or RESTAURANT_ADMIN, so RestaurantService.assertCallerIsAdmin rejects it → InsufficientRoleException → 403."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Updates Restaurant (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Bella Italia\",\n  \"description\": \"Should not be updatable by RESTAURANT_EMPLOYEE\",\n  \"address\": {\n    \"street\": \"Friedrichstraße\",\n    \"houseNumber\": \"42\",\n    \"city\": \"Berlin\",\n    \"zip\": \"10117\",\n    \"country\": \"Germany\"\n  },\n  \"phone\": \"+49 30 11112222\",\n  \"email\": \"info@bella-italia.de\",\n  \"cuisineType\": \"ITALIAN\",\n  \"isOpen\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}"
+                  ]
+                },
+                "description": "RestaurantService.assertCallerIsAdmin rejects it → 403, before RestaurantController.update ever touches the seeded Bella Italia restaurant."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Deletes Restaurant (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}"
+                  ]
+                },
+                "description": "RestaurantService.assertCallerIsAdmin rejects it → 403 — the seeded Bella Italia restaurant used throughout OrderService is never actually deleted."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Creates Menu Item (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Forbidden Item\",\n  \"description\": \"Should not be creatable by RESTAURANT_EMPLOYEE\",\n  \"price\": 9.99,\n  \"category\": \"MAIN\",\n  \"available\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/menu-items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "menu-items"
+                  ]
+                },
+                "description": "RESTAURANT_EMPLOYEE is not SUPER_ADMIN or RESTAURANT_ADMIN, so RestaurantService.assertCallerIsAdmin rejects it → 403."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Updates Menu Item (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Spaghetti Carbonara\",\n  \"description\": \"Should not be updatable by RESTAURANT_EMPLOYEE\",\n  \"price\": 13.90,\n  \"category\": \"MAIN\",\n  \"available\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/menu-items/c1d2e3f4-0102-0102-0102-000000000002",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "menu-items",
+                    "c1d2e3f4-0102-0102-0102-000000000002"
+                  ]
+                },
+                "description": "RestaurantService.assertCallerIsAdmin rejects it → 403, before MenuItemController.updateMenuItem ever touches the seeded Spaghetti Carbonara item."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Deletes Menu Item (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/menu-items/c1d2e3f4-0102-0102-0102-000000000002",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "menu-items",
+                    "c1d2e3f4-0102-0102-0102-000000000002"
+                  ]
+                },
+                "description": "RestaurantService.assertCallerIsAdmin rejects it → 403 — the seeded Spaghetti Carbonara item is never actually deleted."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Gets All Restaurants",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response is an array\", function () {",
+                      "    pm.expect(body).to.be.an('array');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{restaurantEmployeeToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants"
+                  ]
+                },
+                "description": "GET /restaurants has no role check (RestaurantController.findAll never calls assertCallerIsAdmin) — RESTAURANT_EMPLOYEE can browse restaurants even though it cannot manage them."
+              },
+              "response": []
+            },
+            {
+              "name": "Restaurant Employee Logout (client-side)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('restaurantEmployeeToken')) {",
+                      "    throw new Error('No restaurantEmployeeToken set — run \"Restaurant Employee Login\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Token was still valid before logout\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Validate response matches the logged-in restaurant employee\", function () {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('restaurantEmployeeEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('restaurantEmployeeToken', '');",
+                      "",
+                      "pm.test(\"restaurantEmployeeToken cleared from collection variables\", function () {",
+                      "    pm.expect(pm.collectionVariables.get('restaurantEmployeeToken')).to.eql('');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{restaurantEmployeeToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "validate"
+                  ]
+                },
+                "description": "No server-side /auth/logout — confirms the token is still valid, then clears {{restaurantEmployeeToken}} to simulate the client discarding it."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Customer",
+          "item": [
+            {
+              "name": "Customer Login (Anna)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "",
+                      "pm.test(\"Response email matches the seeded customer\", function () {",
+                      "    pm.expect(body.email).to.eql(pm.collectionVariables.get('customerEmail'));",
+                      "});",
+                      "",
+                      "pm.collectionVariables.set('customerToken', body.token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Self-contained re-login as the seeded customer Anna Müller (independent of whether OrderService > Customer Login (Anna) already ran) so this folder can run standalone; stores the JWT in {{customerToken}}."
+              },
+              "response": []
+            },
+            {
+              "name": "Customer Gets Restaurant Orders (should be forbidden)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('customerToken')) {",
+                      "    throw new Error('No customerToken set — run \"Customer Login (Anna)\" first.');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status code is 403\", function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/restaurants/{{bellaItaliaRestaurantId}}/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "restaurants",
+                    "{{bellaItaliaRestaurantId}}",
+                    "orders"
+                  ]
+                },
+                "description": "CUSTOMER is not restaurant staff, so RestaurantOrderService.assertCallerManagesRestaurantOrders rejects it → InsufficientRoleException → 403. Proves non-staff roles cannot see restaurant orders even though they can browse the restaurant/menu-item catalog."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
