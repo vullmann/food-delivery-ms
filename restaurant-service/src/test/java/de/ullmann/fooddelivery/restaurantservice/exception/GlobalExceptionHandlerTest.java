@@ -94,6 +94,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleInsufficientRole_ShouldReturnForbiddenProblemDetail() {
+        InsufficientRoleException exception = new InsufficientRoleException("Only SUPER_ADMIN or RESTAURANT_ADMIN may manage restaurants and menu items");
+
+        ProblemDetail problemDetail = exceptionHandler.handleInsufficientRole(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Insufficient Role");
+        assertThat(problemDetail.getDetail()).isEqualTo("Only SUPER_ADMIN or RESTAURANT_ADMIN may manage restaurants and menu items");
+    }
+
+    @Test
     void handleIllegalArgument_ShouldReturnConflictProblemDetail() {
         // Given
         String errorMessage = "A restaurant with email 'test@restaurant.com' already exists";

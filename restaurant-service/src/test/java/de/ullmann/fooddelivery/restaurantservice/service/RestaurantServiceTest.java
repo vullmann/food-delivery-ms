@@ -11,12 +11,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.restaurantservice.dto.AddressRequest;
@@ -30,6 +34,7 @@ import de.ullmann.fooddelivery.restaurantservice.entity.CuisineType;
 import de.ullmann.fooddelivery.restaurantservice.entity.MenuItem;
 import de.ullmann.fooddelivery.restaurantservice.entity.MenuItemCategory;
 import de.ullmann.fooddelivery.restaurantservice.entity.Restaurant;
+import de.ullmann.fooddelivery.restaurantservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.restaurantservice.exception.MenuItemNotFoundException;
 import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantNotFoundException;
 import de.ullmann.fooddelivery.restaurantservice.repository.MenuItemRepository;
@@ -56,6 +61,16 @@ class RestaurantServiceTest {
         Address address = Address.of("Main St", "1", "Berlin", "10115", "Germany");
         restaurant = Restaurant.create("Pizza Roma", "Best pizza", address,
                 "+49123456", "pizza@roma.de", CuisineType.PIZZA, true);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(String role) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
     }
 
     // ── create ────────────────────────────────────────────────────────────────
@@ -362,6 +377,134 @@ class RestaurantServiceTest {
         assertThatThrownBy(() -> restaurantService.deleteMenuItem(restaurantId, itemId))
                 .isInstanceOf(RestaurantNotFoundException.class);
         verify(menuItemRepository, never()).deleteById(any());
+    }
+
+    // ── Authorization: only SUPER_ADMIN/RESTAURANT_ADMIN may manage restaurants and menu items ──
+
+    @Test
+    void create_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+
+        assertThatThrownBy(() -> restaurantService.create(buildCreateRequest("pizza@roma.de")))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(restaurantRepository, never()).save(any());
+    }
+
+    @Test
+    void create_shouldSucceed_whenCallerIsSuperAdmin() {
+        authenticateAs("SUPER_ADMIN");
+        var request = buildCreateRequest("pizza@roma.de");
+        when(restaurantRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+        when(restaurantRepository.save(any())).thenReturn(restaurant);
+
+        RestaurantResponse response = restaurantService.create(request);
+
+        assertThat(response.name()).isEqualTo("Pizza Roma");
+    }
+
+    @Test
+    void create_shouldSucceed_whenCallerIsRestaurantAdmin() {
+        authenticateAs("RESTAURANT_ADMIN");
+        var request = buildCreateRequest("pizza@roma.de");
+        when(restaurantRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+        when(restaurantRepository.save(any())).thenReturn(restaurant);
+
+        RestaurantResponse response = restaurantService.create(request);
+
+        assertThat(response.name()).isEqualTo("Pizza Roma");
+    }
+
+    @Test
+    void update_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+
+        assertThatThrownBy(() -> restaurantService.update(restaurantId, buildUpdateRequest("x@x.de")))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(restaurantRepository, never()).findById(any());
+    }
+
+    @Test
+    void delete_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+
+        assertThatThrownBy(() -> restaurantService.delete(restaurantId))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(restaurantRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void createMenuItem_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+
+        assertThatThrownBy(() -> restaurantService.createMenuItem(restaurantId,
+                new CreateMenuItemRequest("X", null, BigDecimal.ONE, MenuItemCategory.DRINK, true)))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @Test
+    void updateMenuItem_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        UUID itemId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> restaurantService.updateMenuItem(restaurantId, itemId,
+                new UpdateMenuItemRequest("X", null, BigDecimal.ONE, MenuItemCategory.DRINK, true)))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteMenuItem_shouldThrow_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        UUID itemId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> restaurantService.deleteMenuItem(restaurantId, itemId))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(menuItemRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteMenuItem_shouldThrow_whenCallerIsCustomer() {
+        authenticateAs("CUSTOMER");
+        UUID itemId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> restaurantService.deleteMenuItem(restaurantId, itemId))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    // Browsing restaurants and menu items (GET) stays open to every authenticated role.
+
+    @Test
+    void findById_shouldSucceed_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        when(restaurantRepository.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+
+        RestaurantResponse response = restaurantService.findById(restaurantId);
+
+        assertThat(response.name()).isEqualTo("Pizza Roma");
+    }
+
+    @Test
+    void findAll_shouldSucceed_whenCallerIsCustomer() {
+        authenticateAs("CUSTOMER");
+        when(restaurantRepository.findAll()).thenReturn(List.of(restaurant));
+
+        List<RestaurantResponse> result = restaurantService.findAll(null, null);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void findMenuItems_shouldSucceed_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        var item = MenuItem.create(restaurant, "Margherita", null,
+                new BigDecimal("9.90"), MenuItemCategory.MAIN, true);
+        when(restaurantRepository.existsById(restaurantId)).thenReturn(true);
+        when(menuItemRepository.findAllByRestaurantId(restaurantId)).thenReturn(List.of(item));
+
+        List<MenuItemResponse> result = restaurantService.findMenuItems(restaurantId);
+
+        assertThat(result).hasSize(1);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

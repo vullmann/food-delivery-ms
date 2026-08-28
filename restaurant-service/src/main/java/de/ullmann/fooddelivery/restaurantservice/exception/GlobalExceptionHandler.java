@@ -50,6 +50,13 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
+    @ExceptionHandler(InsufficientRoleException.class)
+    public ProblemDetail handleInsufficientRole(InsufficientRoleException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Insufficient Role");
+        return pd;
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,

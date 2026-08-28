@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrder;
+import de.ullmann.fooddelivery.restaurantservice.dto.RestaurantOrderResponse;
 import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrderStatus;
 import de.ullmann.fooddelivery.restaurantservice.service.RestaurantOrderService;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,10 @@ public class RestaurantOrderController {
     private final RestaurantOrderService restaurantOrderService;
 
     @GetMapping
-    public ResponseEntity<List<RestaurantOrder>> getOrders(@PathVariable UUID restaurantId) {
-        return ResponseEntity.ok(restaurantOrderService.findByRestaurant(restaurantId));
+    public ResponseEntity<List<RestaurantOrderResponse>> getOrders(@PathVariable UUID restaurantId) {
+        return ResponseEntity.ok(restaurantOrderService.findByRestaurant(restaurantId).stream()
+                .map(RestaurantOrderResponse::from)
+                .toList());
     }
 
     @PatchMapping("/{restaurantOrderId}/status")

@@ -3,6 +3,8 @@ package de.ullmann.fooddelivery.restaurantservice.entity;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -25,6 +27,7 @@ public class RestaurantOrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_order_id", nullable = false)
+    @JsonIgnore
     private RestaurantOrder restaurantOrder;
 
     @Column(nullable = false)

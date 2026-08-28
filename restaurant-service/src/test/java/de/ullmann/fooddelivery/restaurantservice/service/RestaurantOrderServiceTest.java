@@ -10,10 +10,12 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import de.ullmann.fooddelivery.common.event.OrderConfirmedEvent;
 import de.ullmann.fooddelivery.common.event.OrderInPreparationEvent;
@@ -34,6 +39,7 @@ import de.ullmann.fooddelivery.restaurantservice.entity.CuisineType;
 import de.ullmann.fooddelivery.restaurantservice.entity.Restaurant;
 import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrder;
 import de.ullmann.fooddelivery.restaurantservice.entity.RestaurantOrderStatus;
+import de.ullmann.fooddelivery.restaurantservice.exception.InsufficientRoleException;
 import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantNotFoundException;
 import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantOrderAccessDeniedException;
 import de.ullmann.fooddelivery.restaurantservice.exception.RestaurantOrderNotFoundException;
@@ -77,7 +83,17 @@ class RestaurantOrderServiceTest {
                 new BigDecimal("19.90"),
                 List.of(new OrderItemDto(UUID.randomUUID(), "Margherita", 1, new BigDecimal("19.90"))),
                 deliveryAddress,
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(String role) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
     }
 
     // ── receiveOrder ──────────────────────────────────────────────────────────
@@ -256,5 +272,79 @@ class RestaurantOrderServiceTest {
         List<RestaurantOrder> result = restaurantOrderService.findByRestaurant(restaurantId);
 
         assertThat(result).isEmpty();
+    }
+
+    // ── Authorization: only restaurant staff may access restaurant orders ───────
+
+    @Test
+    void findByRestaurant_shouldThrow_whenCallerIsCustomer() {
+        authenticateAs("CUSTOMER");
+
+        assertThatThrownBy(() -> restaurantOrderService.findByRestaurant(restaurantId))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(restaurantOrderRepository, never()).findAllByRestaurantId(any());
+    }
+
+    @Test
+    void findByRestaurant_shouldSucceed_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        RestaurantOrder order = RestaurantOrder.create(customerOrderId, restaurantId, customerId, deliveryAddress);
+        when(restaurantOrderRepository.findAllByRestaurantId(restaurantId)).thenReturn(List.of(order));
+
+        List<RestaurantOrder> result = restaurantOrderService.findByRestaurant(restaurantId);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void updateStatus_shouldThrow_whenCallerIsCustomer() {
+        authenticateAs("CUSTOMER");
+
+        assertThatThrownBy(() ->
+                restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.CONFIRMED))
+                .isInstanceOf(InsufficientRoleException.class);
+        verify(restaurantOrderRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateStatus_shouldThrow_whenCallerIsDeliveryDriver() {
+        authenticateAs("DELIVERY_DRIVER");
+
+        assertThatThrownBy(() ->
+                restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.CONFIRMED))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void updateStatus_shouldSucceed_whenCallerIsRestaurantEmployee() {
+        authenticateAs("RESTAURANT_EMPLOYEE");
+        RestaurantOrder order = RestaurantOrder.create(customerOrderId, restaurantId, customerId, deliveryAddress);
+        when(restaurantOrderRepository.findById(restaurantOrderId)).thenReturn(Optional.of(order));
+
+        restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.CONFIRMED);
+
+        assertThat(order.getStatus()).isEqualTo(RestaurantOrderStatus.CONFIRMED);
+    }
+
+    @Test
+    void updateStatus_shouldSucceed_whenCallerIsSuperAdmin() {
+        authenticateAs("SUPER_ADMIN");
+        RestaurantOrder order = RestaurantOrder.create(customerOrderId, restaurantId, customerId, deliveryAddress);
+        when(restaurantOrderRepository.findById(restaurantOrderId)).thenReturn(Optional.of(order));
+
+        restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.CONFIRMED);
+
+        assertThat(order.getStatus()).isEqualTo(RestaurantOrderStatus.CONFIRMED);
+    }
+
+    @Test
+    void updateStatus_shouldSucceed_whenCallerIsRestaurantAdmin() {
+        authenticateAs("RESTAURANT_ADMIN");
+        RestaurantOrder order = RestaurantOrder.create(customerOrderId, restaurantId, customerId, deliveryAddress);
+        when(restaurantOrderRepository.findById(restaurantOrderId)).thenReturn(Optional.of(order));
+
+        restaurantOrderService.updateStatus(restaurantId, restaurantOrderId, RestaurantOrderStatus.CONFIRMED);
+
+        assertThat(order.getStatus()).isEqualTo(RestaurantOrderStatus.CONFIRMED);
     }
 }
