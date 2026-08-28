@@ -9,11 +9,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,11 +26,9 @@ import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
 import de.ullmann.fooddelivery.customerservice.dto.AddressRequest;
-import de.ullmann.fooddelivery.customerservice.dto.CreateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.dto.UpdateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.entity.Customer;
 import de.ullmann.fooddelivery.customerservice.exception.CustomerNotFoundException;
-import de.ullmann.fooddelivery.customerservice.exception.EmailAlreadyInUseException;
 import de.ullmann.fooddelivery.customerservice.repository.CustomerRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,74 +51,12 @@ class CustomerServiceTest {
     @Captor
     private ArgumentCaptor<Customer> customerCaptor;
 
-    private CreateCustomerRequest createCustomerRequest;
-
-    @BeforeEach
-    void setUp() {
-        createCustomerRequest = new CreateCustomerRequest(
-                JOHN,
-                DOE,
-                MAIL,
-                PHONE,
-                new AddressRequest("Main St", "123", "Berlin", "10115", "Germany")
-        );
-    }
-
-    @Test
-    void createCustomer_shouldCreateAndSaveCustomer() {
-
-        when(customerRepository.findByEmail(MAIL)).thenReturn(Optional.empty());
-        when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-
-        Customer result = customerService.createCustomer(createCustomerRequest);
-
-        assertNotNull(result);
-        assertEquals(JOHN, result.getFirstName());
-        assertEquals(DOE, result.getLastName());
-        assertEquals(MAIL, result.getEmail());
-        assertEquals(PHONE, result.getPhone());
-        assertNotNull(result.getAddress());
-
-        verify(customerRepository, times(1)).save(customerCaptor.capture());
-        Customer savedCustomer = customerCaptor.getValue();
-        assertEquals(JOHN, savedCustomer.getFirstName());
-        assertEquals(DOE, savedCustomer.getLastName());
-    }
-
-    @Test
-    void createCustomer_shouldThrowWhenEmailAlreadyInUse() {
-        Customer existing = Customer.create(JOHN, DOE, MAIL, PHONE,
-                Address.of("Main St", "123", "Berlin", "10115", "Germany"));
-        when(customerRepository.findByEmail(MAIL)).thenReturn(Optional.of(existing));
-
-        assertThrows(EmailAlreadyInUseException.class,
-                () -> customerService.createCustomer(createCustomerRequest));
-
-        verify(customerRepository, never()).save(any());
-    }
-
-    @Test
-    void createCustomer_shouldMapAddressCorrectly() {
-
-        when(customerRepository.findByEmail(MAIL)).thenReturn(Optional.empty());
-        when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-
-        Customer result = customerService.createCustomer(createCustomerRequest);
-
-        Address address = result.getAddress();
-        assertEquals("Main St", address.getStreet());
-        assertEquals("123", address.getHouseNumber());
-        assertEquals("Berlin", address.getCity());
-        assertEquals("10115", address.getZip());
-        assertEquals("Germany", address.getCountry());
-    }
-
     @Test
     void registerFromEvent_shouldCreateCustomerWithEventUserId() {
         UUID userId = UUID.randomUUID();
         Address address = Address.of("Main St", "123", "Berlin", "10115", "Germany");
         UserRegisteredEvent event = new UserRegisteredEvent(
-                userId, "CUSTOMER", JOHN, DOE, MAIL, PHONE, address, LocalDateTime.now());
+                userId, "CUSTOMER", JOHN, DOE, MAIL, PHONE, address, LocalDateTime.now(ZoneOffset.UTC));
 
         when(customerRepository.existsById(userId)).thenReturn(false);
         when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -139,7 +75,7 @@ class CustomerServiceTest {
         UUID userId = UUID.randomUUID();
         UserRegisteredEvent event = new UserRegisteredEvent(
                 userId, "CUSTOMER", JOHN, DOE, MAIL, PHONE,
-                Address.of("Main St", "123", "Berlin", "10115", "Germany"), LocalDateTime.now());
+                Address.of("Main St", "123", "Berlin", "10115", "Germany"), LocalDateTime.now(ZoneOffset.UTC));
 
         when(customerRepository.existsById(userId)).thenReturn(true);
 

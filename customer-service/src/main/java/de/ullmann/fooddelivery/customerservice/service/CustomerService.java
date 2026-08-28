@@ -1,6 +1,7 @@
 package de.ullmann.fooddelivery.customerservice.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,11 +14,9 @@ import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.common.outbox.OutboxEventService;
 import de.ullmann.fooddelivery.customerservice.dto.AddressRequest;
-import de.ullmann.fooddelivery.customerservice.dto.CreateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.dto.UpdateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.entity.Customer;
 import de.ullmann.fooddelivery.customerservice.exception.CustomerNotFoundException;
-import de.ullmann.fooddelivery.customerservice.exception.EmailAlreadyInUseException;
 import de.ullmann.fooddelivery.customerservice.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,19 +31,6 @@ public class CustomerService {
     private final OutboxEventService outboxEventService;
 
     // --- Commands ---
-    public Customer createCustomer(CreateCustomerRequest req) {
-        if (customerRepository.findByEmail(req.email()).isPresent()) {
-            throw new EmailAlreadyInUseException(req.email());
-        }
-        Address address = toAddress(req.address());
-        Customer customer = Customer.create(
-                req.firstName(), req.lastName(),
-                req.email(), req.phone(), address
-        );
-        customer = customerRepository.save(customer);
-        publishCustomerCreated(customer);
-        return customer;
-    }
 
     // Consumes UserRegisteredEvent (role=CUSTOMER) so the customer profile shares
     // its id with the auth-service userId; idempotent against redelivery.
@@ -70,7 +56,7 @@ public class CustomerService {
                 "Customer",
                 customer.getId(),
                 CustomerProfileUpdatedEvent.TOPIC,
-                new CustomerProfileUpdatedEvent(customer.getId(), customer.getPhone(), LocalDateTime.now())
+                new CustomerProfileUpdatedEvent(customer.getId(), customer.getPhone(), LocalDateTime.now(ZoneOffset.UTC))
         );
         return customer;
     }

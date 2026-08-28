@@ -46,17 +46,6 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleEmailAlreadyInUse_shouldReturnConflictProblemDetail() {
-        EmailAlreadyInUseException exception = new EmailAlreadyInUseException("test@example.com");
-
-        ProblemDetail problemDetail = handler.handleEmailAlreadyInUse(exception);
-
-        assertNotNull(problemDetail);
-        assertEquals(HttpStatus.CONFLICT.value(), problemDetail.getStatus());
-        assertEquals("Email already in use: test@example.com", problemDetail.getDetail());
-    }
-
-    @Test
     void handleIllegalState_shouldReturnConflictProblemDetail() {
         IllegalStateException exception = new IllegalStateException("Invalid state transition");
 

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,7 +29,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.ullmann.fooddelivery.common.model.Address;
 import de.ullmann.fooddelivery.customerservice.dto.AddressRequest;
-import de.ullmann.fooddelivery.customerservice.dto.CreateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.dto.UpdateCustomerRequest;
 import de.ullmann.fooddelivery.customerservice.entity.Customer;
 import de.ullmann.fooddelivery.customerservice.exception.CustomerNotFoundException;
@@ -49,36 +47,6 @@ class CustomerControllerTest {
 
     @MockitoBean
     private CustomerService customerService;
-
-    // --- POST /customers ---
-
-    @Test
-    void createCustomer_shouldReturnCreatedCustomer() throws Exception {
-        CreateCustomerRequest request = buildCreateRequest("John", "Doe");
-        Customer customer = Customer.create("John", "Doe", "john.doe@example.com",
-                "+49123456789", berlinAddress());
-
-        when(customerService.createCustomer(any())).thenReturn(customer);
-
-        mockMvc.perform(post("/customers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"))
-                .andExpect(jsonPath("$.email").value("john.doe@example.com"))
-                .andExpect(jsonPath("$.phone").value("+49123456789"));
-    }
-
-    @Test
-    void createCustomer_shouldReturnBadRequestWhenFirstNameIsBlank() throws Exception {
-        CreateCustomerRequest invalid = buildCreateRequest("", "Doe");
-
-        mockMvc.perform(post("/customers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalid)))
-                .andExpect(status().isBadRequest());
-    }
 
     // --- GET /customers/{id} ---
 
@@ -219,12 +187,6 @@ class CustomerControllerTest {
     }
 
     // --- Helpers ---
-
-    private CreateCustomerRequest buildCreateRequest(String firstName, String lastName) {
-        return new CreateCustomerRequest(firstName, lastName,
-                "john.doe@example.com", "+49123456789",
-                new AddressRequest("Main St", "123", "Berlin", "10115", "Germany"));
-    }
 
     private UpdateCustomerRequest buildUpdateRequest(String firstName, String lastName) {
         return new UpdateCustomerRequest(firstName, lastName, "+49987654321",
