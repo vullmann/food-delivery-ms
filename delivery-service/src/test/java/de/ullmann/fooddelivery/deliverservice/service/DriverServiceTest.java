@@ -23,6 +23,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import de.ullmann.fooddelivery.common.event.UserRegisteredEvent;
 import de.ullmann.fooddelivery.deliverservice.dto.DriverResponse;
@@ -53,9 +54,13 @@ class DriverServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    private void authenticateAsDeliveryDriver() {
+    private void authenticateAs(String role) {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_DELIVERY_DRIVER"))));
+                UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+    }
+
+    private void authenticateAsDeliveryDriver() {
+        authenticateAs("DELIVERY_DRIVER");
     }
 
     // ── registerFromEvent ─────────────────────────────────────────────────────
@@ -65,7 +70,7 @@ class DriverServiceTest {
         UUID userId = UUID.randomUUID();
         UserRegisteredEvent event = new UserRegisteredEvent(
                 userId, "DELIVERY_DRIVER", "Max", "Müller", "max@example.com",
-                "+49 30 11111111", null, LocalDateTime.now());
+                "+49 30 11111111", null, LocalDateTime.now(ZoneOffset.UTC));
 
         when(driverRepository.existsById(userId)).thenReturn(false);
         when(driverRepository.save(any(Driver.class))).thenAnswer(i -> i.getArgument(0));
@@ -83,7 +88,7 @@ class DriverServiceTest {
         UUID userId = UUID.randomUUID();
         UserRegisteredEvent event = new UserRegisteredEvent(
                 userId, "DELIVERY_DRIVER", "Max", "Müller", "max@example.com",
-                "+49 30 11111111", null, LocalDateTime.now());
+                "+49 30 11111111", null, LocalDateTime.now(ZoneOffset.UTC));
 
         when(driverRepository.existsById(userId)).thenReturn(true);
 
@@ -238,5 +243,53 @@ class DriverServiceTest {
 
         assertThatThrownBy(() -> driverService.delete(driver.getId()))
                 .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    // ── only SUPER_ADMIN/DELIVERY_ADMIN may manage the driver roster ───────────
+
+    @Test
+    void findAll_shouldThrow_whenCallerIsCustomer() {
+        authenticateAs("CUSTOMER");
+
+        assertThatThrownBy(() -> driverService.findAll(null))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void findAll_shouldThrow_whenCallerIsRestaurantAdmin() {
+        authenticateAs("RESTAURANT_ADMIN");
+
+        assertThatThrownBy(() -> driverService.findAll(null))
+                .isInstanceOf(InsufficientRoleException.class);
+    }
+
+    @Test
+    void findAll_shouldSucceed_whenCallerIsDeliveryAdmin() {
+        authenticateAs("DELIVERY_ADMIN");
+        when(driverRepository.findAll()).thenReturn(List.of(driver));
+
+        List<DriverResponse> result = driverService.findAll(null);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void findAll_shouldSucceed_whenCallerIsSuperAdmin() {
+        authenticateAs("SUPER_ADMIN");
+        when(driverRepository.findAll()).thenReturn(List.of(driver));
+
+        List<DriverResponse> result = driverService.findAll(null);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void delete_shouldSucceed_whenCallerIsDeliveryAdmin() {
+        authenticateAs("DELIVERY_ADMIN");
+        when(driverRepository.existsById(driver.getId())).thenReturn(true);
+
+        driverService.delete(driver.getId());
+
+        verify(driverRepository).deleteById(driver.getId());
     }
 }

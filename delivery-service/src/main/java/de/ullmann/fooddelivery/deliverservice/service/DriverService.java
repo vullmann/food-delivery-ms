@@ -25,7 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DriverService {
 
-    private static final String DRIVER_ROLE_AUTHORITY = "ROLE_" + Role.DELIVERY_DRIVER;
+    private static final String SUPER_ADMIN_AUTHORITY = "ROLE_" + Role.SUPER_ADMIN;
+    private static final String DELIVERY_ADMIN_AUTHORITY = "ROLE_" + Role.DELIVERY_ADMIN;
 
     private final DriverRepository driverRepository;
 
@@ -77,17 +78,20 @@ public class DriverService {
         driverRepository.deleteById(id);
     }
 
-    // DELIVERY_DRIVER may only manage its own deliveries (see DeliveryService), not the driver roster.
-    // No authentication in context (e.g. plain unit tests, internal callers) is treated as not a driver.
+    // The driver roster may only be managed by SUPER_ADMIN or DELIVERY_ADMIN. A DELIVERY_DRIVER may only
+    // manage its own deliveries (see DeliveryService), not the roster, and no other role has any business
+    // reason to view or modify it. No authentication in context (e.g. plain unit tests, internal callers)
+    // is treated as unrestricted.
     private void assertCallerManagesDrivers() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return;
         }
-        boolean isDeliveryDriver = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(DRIVER_ROLE_AUTHORITY));
-        if (isDeliveryDriver) {
-            throw new InsufficientRoleException("DELIVERY_DRIVER is not allowed to manage the driver roster");
+        boolean allowed = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(SUPER_ADMIN_AUTHORITY)
+                        || a.getAuthority().equals(DELIVERY_ADMIN_AUTHORITY));
+        if (!allowed) {
+            throw new InsufficientRoleException("Only SUPER_ADMIN or DELIVERY_ADMIN may manage the driver roster");
         }
     }
 }
