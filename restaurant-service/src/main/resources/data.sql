@@ -33,3 +33,24 @@ VALUES
     ('c1d2e3f4-0304-0304-0304-000000000012', 'b1c2d3e4-0003-0003-0003-000000000003', 'Mochi Ice Cream',   'Green tea mochi with vanilla filling',            5.50,  'DESSERT', true),
     ('c1d2e3f4-0305-0305-0305-000000000013', 'b1c2d3e4-0003-0003-0003-000000000003', 'Japanese Green Tea','Freshly brewed sencha',                           3.00,  'DRINK',   true)
 ON CONFLICT DO NOTHING;
+
+-- Restaurant-side mirror of Anna Müller's order at Bella Italia (see customer-service/order-service/
+-- delivery-service data.sql — customer_order_id matches the READY_FOR_DELIVERY order in order-service).
+-- READY_FOR_DELIVERY matches the order-service status and the unassigned PENDING delivery in delivery-service.
+INSERT INTO restaurant_orders (id, customer_order_id, restaurant_id, customer_id,
+                                street, house_number, city, zip, country,
+                                status, created_at)
+VALUES
+    ('f2a3b4c5-0001-0001-0001-000000000001', 'f1a2b3c4-0001-0001-0001-000000000001',
+     'b1c2d3e4-0001-0001-0001-000000000001', 'a1b2c3d4-0001-0001-0001-000000000001',
+     'Hauptstraße', '12', 'Berlin', '10115', 'Germany',
+     'READY_FOR_DELIVERY', NOW())
+ON CONFLICT DO NOTHING;
+
+INSERT INTO restaurant_order_items (id, restaurant_order_id, menu_item_id, name, quantity, unit_price, total_price)
+VALUES
+    ('f3a4b5c6-0001-0001-0001-000000000001', 'f2a3b4c5-0001-0001-0001-000000000001',
+     'c1d2e3f4-0102-0102-0102-000000000002', 'Spaghetti Carbonara', 1, 13.90, 13.90),
+    ('f3a4b5c6-0002-0002-0002-000000000002', 'f2a3b4c5-0001-0001-0001-000000000001',
+     'c1d2e3f4-0103-0103-0103-000000000003', 'Tiramisu', 1, 6.50, 6.50)
+ON CONFLICT DO NOTHING;

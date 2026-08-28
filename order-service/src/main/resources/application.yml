@@ -16,16 +16,20 @@ spring:
     name: order-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:orderdb}
-    username: ${SPRING_DATASOURCE_USERNAME:order}
+    username: ${SPRING_DATASOURCE_USERNAME:orderuser}
     password: ${SPRING_DATASOURCE_PASSWORD:order}
   jpa:
+    defer-datasource-initialization: true
     hibernate:
-      ddl-auto: update   # beim ersten Start Tabellen erstellen
+      ddl-auto: create   # beim ersten Start Tabellen erstellen
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
